@@ -1,0 +1,48 @@
+# Credentials
+.env
+*.pem
+*.key
+
+# Data files (too large for git)
+*.csv
+*.npz
+*.db
+*.sqlite
+*.sqlite3
+data/synthetic/
+data/raw/
+data/weather_cache/
+
+# Model weights (track with git-lfs or download separately)
+*.pt
+*.pth
+*.onnx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Grafana
+grafana.db
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
