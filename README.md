@@ -5,7 +5,7 @@
 > repeating mistakes already made and documented.
 
 **Institution:** Singapore Institute of Technology (SIT), FSSD Programme
-**Researcher:** Redi Ramli (Erma Pratiwi)
+**Researcher:** Redi Ramli
 **Supervisor:** Prof. Neelakantam Venkatarayalu (Prof. Venkat)
 **Industry partner:** Jason Marine Group (funds the project)
 **Started:** 2024 · **Deployed aboard vessel:** 24 Sep 2026
