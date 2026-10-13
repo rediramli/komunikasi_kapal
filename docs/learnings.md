@@ -96,3 +96,43 @@
 - Partial results (e.g. 1/3 failover success) are reported as-is to the supervisor, not inflated.
 - Placeholder data is flagged all the way to the UI via `ModuleState.is_placeholder`.
 - Calibration and test methodology are always stated alongside accuracy numbers.
+
+---
+
+## OpenMPTCProuter testbed
+
+Setup of OMR v0.63 on the lab RPi 4 + OMR VPS on DigitalOcean (12–13 Oct 2026).
+Full procedure: [`testbed-omr/README.md`](../testbed-omr/README.md).
+
+### Root filesystem silently read-only
+- **Discovered:** 12 Oct 2026
+- **Detail:** The OMR rpi4 image ships `/etc/config/fstab` with a mount entry for `/` and `enabled_fsck=1`. At boot, `block` remounts root read-only to fsck it and never returns it to rw. `apk`, `uci commit` and `passwd` all fail ("Read-only file system"), and `passwd` appearing to succeed earlier was misleading.
+- **Fix:** Delete the `/` entry from fstab (`testbed-omr/scripts/fix-fstab-ro.sh`).
+
+### OMR resets all TCP when the VPS is unreachable
+- **Discovered:** 12 Oct 2026
+- **Detail:** With the VPS unreachable (here: the image was still configured for an old VPS, 165.22.245.127), the transparent proxy accepts every TCP connection — including the router's own — and resets it. Symptoms looked like TLS problems (`SSL error reason(5)`, `curl: (35) Connection reset by peer`, Tailscale "fetch control key ... connection reset").
+- **Implication for the vessel:** No VPS = no TCP at all, not a fallback to direct links. VPS availability is a single point of failure that must be monitored.
+
+### `openmptcprouter.vps.ip` is a uci LIST
+- **Discovered:** 13 Oct 2026
+- **Impact:** ~1 h of debugging keys that were actually correct
+- **Detail:** `uci set openmptcprouter.vps.ip=<ip>` turns the list into an option. `uci show` prints both identically, but the init script iterates with `config_list_foreach`, finds no server, and logs `Can't get vps token, try later ()` (empty reason = it never tried).
+- **Rule:** `uci delete openmptcprouter.vps.ip; uci add_list openmptcprouter.vps.ip=<ip>`.
+
+### OMR VPS "Server key" in the text file can be the admin password
+- **Discovered:** 13 Oct 2026
+- **Detail:** The installer was run twice (first run OOM-killed). Afterwards the "Server key" line in `/root/openmptcprouter_config.txt` matched the `admin` user, not `openmptcprouter`, and the API answered `Incorrect username or password`.
+- **Rule:** Read the `openmptcprouter` user's password from `/etc/openmptcprouter-vps-admin/omr-admin-config.json` and test it with `curl -sk -X POST https://<vps>:65500/token -d "username=openmptcprouter&password=<key>"` before touching the router.
+
+### OMR VPS needs >= 1 GB RAM
+- **Detail:** On a 512 MB droplet the installer's `apt-get` was OOM-killed mid-install. Use 1 GB + 2 GB swap, and disable `unattended-upgrades` (it held the dpkg lock right after the resize reboot).
+
+### Tailscale on OMR: no netifd interface for tailscale0
+- **Detail:** Declaring `network.tailscale` (`proto none`, device `tailscale0`) makes netifd strip the 100.x address and OMR adds `ip4table`/metric as if it were a WAN → SSH over Tailscale dies. Bind a firewall zone to `device 'tailscale0'` instead and run `tailscale up --netfilter-mode=off`. The tailscale package is not in the OMR repo; use the static arm64 build (download on a laptop — not amd64).
+
+### `service network reload` brings dead WANs back
+- **Detail:** With no Teltonika attached, a reload re-enabled `wan1`/`wan2`, the default route moved to a dead link and Tailscale went offline. Keep unused WANs at `auto='0'`.
+
+### Phone hotspot as a temporary uplink is not reliable
+- **Detail:** Signal −46 dBm / 72 Mbps PHY, yet RTT 6.7 s at ~27 kbps of traffic — the operator was throttling. Download speed of ~1 KB/s made the VPS installer look broken. Check RTT before blaming the software.

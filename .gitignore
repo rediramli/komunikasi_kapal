@@ -46,3 +46,7 @@ grafana.db
 # Temporary
 tmp/
 temp/
+
+# OpenMPTCProuter keys (never commit)
+openmptcprouter_config.txt
+omr_user_key

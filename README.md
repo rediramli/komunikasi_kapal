@@ -85,7 +85,7 @@ never leaves Singapore waters.
 
 | Device | Interface | IP | Notes |
 |---|---|---|---|
-| **Server** | — | `157.230.47.109` | SSH: `root@`, Grafana: `:3000` (admin/Singapore2026=), API: `:5000` |
+| **Server** | — | `157.230.47.109` | SSH: `root@`, Grafana: `:3000` (credentials in `.env`, not in git), API: `:5000` |
 | **RPi** | eth0 | `192.168.1.144` | → RUTM30/Singtel, gw `192.168.1.1`, metric 100 |
 | **RPi** | eth1 | `192.168.2.164` | → RUT241/Simba, gw `192.168.2.1`, metric 200 |
 | **RPi** | wlan0 | `192.168.50.1` | WiFi AP (SSID: SIT-Maritime-Gateway) |
@@ -94,6 +94,8 @@ never leaves Singapore waters.
 | **RUT241** | LAN | `192.168.2.1` | Simba 4G router, admin via HTTPS |
 | **AIS receiver** | WiFi | `192.168.50.38` | Ethan's device, forwards to his server (plain TCP, not MPTCP) |
 | **Jetson** | — | `10.42.0.164` | Lab network, not on vessel |
+| **OMR testbed** (RPi 4) | LAN / Tailscale | `192.168.100.1` / `omr-rpi4` | Lab only — see `testbed-omr/` |
+| **OMR VPS** | — | `168.144.105.155` | MPTCP aggregator for the testbed. SSH port 65222 |
 
 > ⚠️ **`192.168.50.41` is fake.** It appears in `mock_server.py` as a BirdDog
 > camera placeholder. The camera is not installed yet.
@@ -148,6 +150,10 @@ fssd-proj-2-3/
 ├── pci-prediction/            ← PCI boundary & handover prediction
 │   ├── README.md
 │   └── ...                    ← to be organized
+│
+├── testbed-omr/               ← Lab testbed: OpenMPTCProuter on RPi 4 + OMR VPS
+│   ├── README.md              ← topology, setup order, verification, drive-test plan
+│   └── scripts/               ← router setup scripts (Tailscale, VPS link, Wi-Fi uplink)
 │
 ├── server/                    ← DigitalOcean server code
 │   ├── README.md
