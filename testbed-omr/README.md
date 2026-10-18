@@ -131,3 +131,45 @@ Never commit `openmptcprouter_config.txt` or any key to this repo.
 - Log at 1 Hz: GNSS position, per-router RSRP/RSRQ/SINR/PCI/band/**registered
   PLMN**, per-subflow MPTCP bytes, RTT per WAN, stream bitrate/stalls.
 - Lab failover test first (pull one WAN cable mid-stream).
+
+## 7. D-Link camera → VPS (RTSP/HLS over MPTCP)
+
+Goal: view the D-Link DCS-8526LH (LAN-side, behind the Ruijie at `192.168.110.2`)
+from the public VPS, so the path mirrors a vessel camera → shore.
+
+**Camera prerequisite (the hard part):** in the mydlink app → Device Settings,
+**ONVIF must be On**. With ONVIF Off the camera answers `OPTIONS` but returns
+`454 Session Not Found` to every `DESCRIBE`/`SETUP` — no `401` challenge — and no
+amount of RTSP-client tweaking helps. Enabling ONVIF needs the camera to reach the
+mydlink cloud first, so it also needs working internet. See
+[`docs/learnings.md`](../docs/learnings.md) → "RTSP returns 454 until ONVIF is enabled".
+
+**Reaching the camera from the VPS (tunnel-only, no public exposure):**
+- RPi has a direct route to the camera LAN (`192.168.110.0/24 dev eth0`).
+- nftables includes on the RPi (not a `src='vpn'` uci redirect — that leaks to a
+  public VPS DNAT) map the VPS tunnel IP to the camera, saddr-restricted:
+  `/etc/dlink/dnat.nft` DNAT `10.255.252.1 :18554 → 192.168.110.2:554`,
+  plus matching forward/snat includes.
+
+**MediaMTX on the VPS** (`/etc/mediamtx/mediamtx.yml`, `chmod 600`, runs as root):
+```yaml
+paths:
+  dlink:                                   # main, H.264 2560x1440
+    source: rtsp://admin:<PASSWORD>@10.255.252.2:18554/live/profile.0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+  dlink_sub:                               # sub, H.264 1280x720
+    source: rtsp://admin:<PASSWORD>@10.255.252.2:18554/live/profile.1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+```
+Enabling ONVIF can change the RTSP password; a `401` in the MediaMTX log (not `454`)
+means the stored password is stale. `admin` is the RTSP user; the password is kept
+only in `mediamtx.yml`, never in git or chat.
+
+**View / verify:**
+- VLC: `rtsp://<vps>:8554/dlink`
+- Browser (HLS, H.264 only): `http://<vps>:8888/dlink/`
+- `ffprobe -rtsp_transport tcp rtsp://<vps>:8554/dlink` → `h264 2560x1440` + `aac`
+- Path rides the OMR MPTCP tunnel: `ip mptcp endpoint show` (one per WAN) and, on
+  the VPS, `ss -tiM` shows the connection with `subflows_total:2`.

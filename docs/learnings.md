@@ -136,3 +136,13 @@ Full procedure: [`testbed-omr/README.md`](../testbed-omr/README.md).
 
 ### Phone hotspot as a temporary uplink is not reliable
 - **Detail:** Signal −46 dBm / 72 Mbps PHY, yet RTT 6.7 s at ~27 kbps of traffic — the operator was throttling. Download speed of ~1 KB/s made the VPS installer look broken. Check RTT before blaming the software.
+
+### D-Link DCS-8526LH: RTSP returns 454 until ONVIF is enabled
+- **Discovered:** 18 Oct 2026
+- **Detail:** The camera's RTSP server (`Server: RtpRtspServer`) answered `OPTIONS` with `200` but replied `454 Session Not Found` to **every** `DESCRIBE`/`SETUP`/`GET_PARAMETER`/`PLAY` — regardless of path (24 paths swept), of auth (none / Basic / Digest), and of client source subnet, and it never sent a `401` challenge. MediaMTX (gortsplib) always DESCRIBEs first and waits for `401`, so it failed. The cause was **ONVIF turned Off** in the mydlink app; on these cameras the local RTSP streaming service is gated behind ONVIF. OPTIONS still answered because the listener is up.
+- **Also:** ONVIF can only be toggled from the mydlink app, and the app needs the camera to reach the **mydlink cloud** first ("Linking to the Cloud…" hangs without internet). On the isolated test LAN the camera's internet path (camera → Ruijie → Ruijie WAN → RPi → MPTCP) was down (Ruijie WAN `192.168.100.203` ARP `FAILED`), so setup never completed. Giving the camera internet, finishing cloud link, then enabling ONVIF fixed it.
+- **Fix:** mydlink app → Device Settings → **ONVIF = On** (needs the camera online to the cloud). After that `DESCRIBE` returns `401 Digest realm="RtpRtspServer"` and `admin` + the camera password streams `rtsp://<cam>/live/profile.0` (H.264 2560×1440 main, 1280×720 sub; AAC 16 kHz). Diagnostic scripts: `testbed-omr/scripts/rtsptest*.sh`, `testbed-omr/tasks/rtsp-*.sh`.
+- **Gotcha:** enabling ONVIF can change the RTSP password, so the value stored in `mediamtx.yml` may need re-entering (`401` in the MediaMTX log with the stream otherwise reachable = wrong credential, not 454).
+
+### OMR copies RPi `src='vpn'` port forwards to the VPS as public DNAT
+- **Detail:** A uci redirect on the RPi with `src='vpn'` is auto-propagated by OMR into a **public** DNAT on the VPS, exposing the target (e.g. a LAN camera) to the internet. It happened once and was removed. For tunnel-only reachability use a plain nftables include on the RPi (`/etc/dlink/*.nft`, saddr-restricted to the VPS tunnel IP `10.255.252.1`), never a `src='vpn'` redirect. Verify on the VPS with `nft list ruleset | grep 'dnat ip to 10.255.252.2'` → must be empty.
