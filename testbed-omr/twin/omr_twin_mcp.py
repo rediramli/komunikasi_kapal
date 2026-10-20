@@ -34,8 +34,8 @@ while :; do
   echo "$(date +%s),$x,$y,$([ "$s1" = up ] && echo 1 || echo 0),$([ "$s2" = up ] && echo 1 || echo 0),$o1,$o2,$k1,$k2" >> $F
   n=$((n+1))
   if [ $n -ge 300 ]; then tail -900 $F > $F.tmp && mv $F.tmp $F; n=0; fi
-  last=$(cat /tmp/omr_live.ping 2>/dev/null || echo 0)
-  [ $(( $(date +%s) - last )) -gt 900 ] && { rm -f /tmp/omr_live.pid; exit 0; }   # berhenti bila 15 menit tak dipakai
+  # runs continuously (no idle self-stop) so the dashboard never freezes; a single guarded
+  # instance is enforced by the pid-file check in run_sampler() / rc.local at boot.
 done
 '''
 
@@ -43,7 +43,7 @@ LIVE_CMD = r'''
 S=%(since)d
 [ -f /root/omr-live.sh ] || { echo NEED_INSTALL; exit 0; }
 date +%%s > /tmp/omr_live.ping
-P=$(cat /tmp/omr_live.pid 2>/dev/null); kill -0 "$P" 2>/dev/null || { nohup sh /root/omr-live.sh </dev/null >/dev/null 2>&1 & sleep 2; }
+pgrep -f omr-live.sh >/dev/null 2>&1 || { nohup sh /root/omr-live.sh </dev/null >/dev/null 2>&1 & sleep 2; }
 echo "NOW $(date +%%s)"
 awk -F, -v s=$S '$1>s' /tmp/omr_live.csv 2>/dev/null | tail -300 | sed 's/^/R /'
 D=$(ls -dt /root/fotest_*/ 2>/dev/null | head -1)
