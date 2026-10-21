@@ -52,6 +52,8 @@ split them, as the two SIMs drift and degrade* — is what the agent learns.
 | `mpproxy_recv.py` | **Stage 3** receiver (VPS): in-order reassembly + metrics |
 | `run_stage3.py` | **Stage 3** orchestrator: deploy, sweep split `w`, measure |
 | `controller.py` | **Stage 3b** closed loop: live state → policy → drive the proxy |
+| `edge_control.py` | **Stage 4** Jetson brain: observe → policy → push split to RPi |
+| `run_stage4_demo.py` | **Stage 4** full-loop demo across Jetson + RPi + VPS |
 
 ## Run
 
@@ -177,6 +179,37 @@ python3 controller.py            # decision table (offline, no data)
 python3 controller.py --run      # observe live, run the proxy with the chosen split
 ```
 
+## Stage 4 — inference on the Jetson (edge brain)
+
+The policy runs on the NVIDIA **Jetson Orin NX** (`fctlab-jetson`), reading the
+real live per-SIM state from the RPi over tailscale and deciding the split — the
+Jetson is the brain, the RPi (with the SIMs) is the actuator host.
+
+Measured on the Jetson (JetPack R35.5, Python 3.8, numpy):
+- offline training (12k steps): **5.4 s**
+- inference: **~125 microseconds/decision (~8000/s)** — far faster than any
+  control loop needs.
+- it reads `/tmp/omr_live.csv` from the RPi via tailscale SSH and the policy
+  produces the split live (e.g. rtt 10/96 ms → use both SIMs).
+
+Setup: code in `~/bonding-ml` on the Jetson; the Jetson's key is authorised on
+the RPi (`/etc/dropbear/authorized_keys`) so it can read telemetry.
+
+**Closed loop (works on hardware).** `edge_control.py` runs on the Jetson: observe
+→ policy → push the split `w` to the proxy sender's control file on the RPi (the
+sender polls it and changes split mid-stream). `run_stage4_demo.py` orchestrates
+the whole thing. A real run — the Jetson decided and the RPi applied it live:
+
+```
+Jetson:  healthy → w=0.25 | Singtel RTT 250 → w=0.75 | cap collapse → w=1.0 | symmetric → w=0.5
+RPi log: [ctl] w 0.50 -> 0.25 @ 10.8s    [ctl] w 0.25 -> 0.75 @ 19.3s
+```
+
+i.e. the edge brain's decisions reach the actuator and change the split while the
+stream runs. For production the Jetson belongs on the Omada switch, co-located
+with the RPi (lower-latency control than SSH-over-tailscale, which is what the
+demo uses).
+
 ## Honest caveats
 
 - `link_model.py` is a **model calibrated to our measurements**, not the real
@@ -204,5 +237,9 @@ python3 controller.py --run      # observe live, run the proxy with the chosen s
    → proxy split, run on hardware; model corrected to match the real data.
    Remaining: live capacity estimation (sampler gives RTT, not capacity) and
    dynamic mid-stream `w` changes over a control channel.
-4. **Stage 4**: deploy inference on the Jetson Orin Nano, reading the live
-   sampler and driving the proxy's split live; optional move from bandit to DQN.
+4. **Stage 4 — done (core)**: inference on the Jetson Orin NX (~125 us/decision),
+   reading the live sampler from the RPi over tailscale, with a control channel
+   that pushes the decision to the sender to change the split mid-stream — the
+   full closed loop runs on hardware. Remaining: move the Jetson onto the Omada
+   switch for low-latency control, feed MediaMTX the reassembled stream, live
+   capacity estimation, optional bandit → DQN.

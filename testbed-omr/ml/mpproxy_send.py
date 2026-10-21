@@ -66,6 +66,8 @@ def main():
     ap.add_argument("--qdepth", type=int, default=64)
     ap.add_argument("--strict", action="store_true",
                     help="no work-stealing: honour the split w exactly (shows its true cost)")
+    ap.add_argument("--ctl", default="", help="control file polled live for the split w "
+                    "(the edge controller writes it); overrides --w while streaming")
     a = ap.parse_args()
 
     socks1 = [connect(a.host, a.port, WAN1_IP, 1) for _ in range(a.n1)]
@@ -84,9 +86,25 @@ def main():
     seq = 0
     acc = 0.0                       # weighted-split accumulator
     rr_i = 0
+    cur_w = a.w                     # live split, updated from the control file
+    last_ctl = 0.0
     t0 = time.monotonic()
     interval = (CHUNK * 8 / (a.bitrate * 1e6)) if a.bitrate > 0 else 0.0
     next_send = t0
+
+    def poll_ctl(now):
+        nonlocal cur_w, last_ctl
+        if not a.ctl or now - last_ctl < 0.25:
+            return
+        last_ctl = now
+        try:
+            nv = float(open(a.ctl).read().strip())
+        except Exception:
+            return
+        if 0.0 <= nv <= 1.0 and abs(nv - cur_w) > 1e-6:
+            sys.stderr.write(f"[ctl] w {cur_w:.2f} -> {nv:.2f} @ {now - t0:4.1f}s\n")
+            sys.stderr.flush()
+            cur_w = nv
 
     def put(qlist, idx_holder):
         # round-robin within a path, work-steal to the other path if full
@@ -100,13 +118,17 @@ def main():
         return False
 
     i1, i2 = [0], [0]
-    while time.monotonic() - t0 < a.dur and not stop.is_set():
+    while True:
+        now = time.monotonic()
+        if now - t0 >= a.dur or stop.is_set():
+            break
+        poll_ctl(now)
         if a.sched == "rr":
             q = queues[rr_i % len(queues)]; rr_i += 1
             try: q.put((seq, payload), timeout=0.5)
             except queue.Full: pass
         else:
-            acc += a.w
+            acc += cur_w
             to1 = acc >= 1.0
             if to1:
                 acc -= 1.0
