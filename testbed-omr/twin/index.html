@@ -1,0 +1,858 @@
+<title>Digital Twin MPTCP</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: control bar -> live diagram (RPi -> 2 links -> VPS) -> link readouts -> timeline -> events & summary */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#0f1720; --muted:#5a6472; --line:#d6dbe2; --grid:#e8ebef;
+  --simba:#2a78d6; --singtel:#eb6834; --stall:#d03b3b; --good:#0b8f3a; --warn:#b97800;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161b; --surface:#1a2027; --ink:#eef1f4; --muted:#a3adb9; --line:#2e3742; --grid:#242c35;
+  --simba:#3987e5; --singtel:#eb6834; --stall:#e66767; --good:#3cc36a; --warn:#e0a52a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161b; --surface:#1a2027; --ink:#eef1f4; --muted:#a3adb9; --line:#2e3742; --grid:#242c35;
+  --simba:#3987e5; --singtel:#eb6834; --stall:#e66767; --good:#3cc36a; --warn:#e0a52a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px}
+.bar label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+select,button,.filebtn{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
+button:focus-visible,select:focus-visible,.filebtn:focus-within{outline:2px solid var(--simba);outline-offset:2px}
+button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.filebtn input{position:absolute;opacity:0;width:1px;height:1px}
+.spacer{flex:1}
+.clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+#stage{position:relative}
+#diag{display:block;width:100%;height:auto}
+.status{position:absolute;top:10px;left:12px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid currentColor}
+.st-ok{color:var(--good)} .st-fo{color:var(--warn)} .st-stall{color:var(--stall)}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ro{padding:10px 12px;display:grid;gap:4px;min-width:0}
+.ro .k{display:flex;align-items:center;gap:8px;font-weight:600}
+.sw{width:12px;height:12px;border-radius:3px;flex:none}
+.ro .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px}
+.ro .v small{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.bad{color:var(--stall);border-color:var(--stall)} .chip.ok{color:var(--good);border-color:var(--good)}
+#tl{display:block;width:100%;height:190px;cursor:crosshair;touch-action:none}
+#lat{display:block;width:100%;height:150px}
+.tlwrap,.latwrap{padding:8px 10px 6px}
+.latwrap h2{margin:0 0 4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);padding:0 4px 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.lg-line{width:16px;height:2px;border-radius:2px}
+.lg-box{width:12px;height:10px;border-radius:2px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+.cols .panel{padding:12px 14px;min-width:0}
+h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+ol.ev{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+ol.ev button{width:100%;text-align:left;display:grid;grid-template-columns:64px 1fr;gap:8px;background:transparent;border:1px solid transparent;padding:6px 8px}
+ol.ev button.cur{border-color:var(--line);background:var(--bg)}
+ol.ev .t{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.bad{color:var(--stall);font-weight:600}
+.note{color:var(--muted);font-size:12.5px;margin:8px 0 0;max-width:80ch}
+.drop{outline:2px dashed var(--simba);outline-offset:4px}
+#msg{font-size:12.5px;color:var(--muted)}
+.video .bar{border-bottom:1px solid var(--grid)}
+.vwrap{background:#000;border-radius:0 0 10px 10px;overflow:hidden}
+.vbox{position:relative;background:#000;aspect-ratio:16/9;max-width:min(100%,780px);margin:0 auto;width:100%}
+.vbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.vmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:#c9d1db;font-size:13.5px;line-height:1.5}
+.video a{font-size:13px;color:var(--simba)}
+#vnote{font-size:12.5px;color:var(--muted)}
+.sched{display:grid;gap:0}
+.lk{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.lk i{width:10px;height:10px;border-radius:3px;display:inline-block}
+button.cut{border-color:var(--stall);color:var(--stall)}
+button.cut.on{background:var(--stall);border-color:var(--stall);color:#fff}
+#linkmsg{font-size:12.5px;color:var(--muted)}
+.tlctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:2px 4px 8px}
+.tlctl input[type=range]{flex:1;min-width:160px;accent-color:var(--ink)}
+.tlctl .pos{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#tlspan button,#vproto button,#prio button{border-radius:0;margin-left:-1px}
+#tlspan button:first-child,#vproto button:first-child,#prio button:first-child{border-radius:7px 0 0 7px;margin-left:0}
+#tlspan button:last-child,#vproto button:last-child,#prio button:last-child{border-radius:0 7px 7px 0}
+.sched .bar{border-bottom:1px solid var(--grid)}
+.sched .desc{margin:0;padding:8px 12px 10px;color:var(--muted);font-size:12.5px;max-width:95ch}
+.sched .desc b{color:var(--ink);font-weight:600}
+.sched .desc .warn{color:var(--warn);font-weight:600}
+#schedmsg{font-size:12.5px;color:var(--muted)}
+button:disabled,select:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.cmp{padding:12px 14px;min-width:0}
+.cmp .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:6px}
+.cmp .hd h2{margin:0}
+.cmp td.best{color:var(--good);font-weight:600}
+.cmp tr.now td:first-child{font-weight:600}
+.sdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle}
+
+/* ===== Landscape single-screen layout (demo / presentation) ===== */
+.colL,.colM,.colR{display:contents}
+@media (min-width:1024px) and (min-aspect-ratio:1/1){
+  html,body{height:100%;overflow:hidden}
+  #app{max-width:none;width:100vw;height:100vh;min-height:0;padding:10px;gap:10px;
+    grid-template-columns:clamp(320px,27vw,430px) minmax(0,1fr) clamp(275px,21vw,330px);
+    grid-template-rows:auto minmax(0,1fr);
+    grid-template-areas:"hd hd hd" "colL colM colR";overflow:hidden}
+  header{grid-area:hd;margin:0;align-items:center}
+  header .sub{display:none}
+  h1{font-size:19px}
+  .colL,.colM,.colR{display:grid;gap:10px;min-width:0;min-height:0}
+  .colL{grid-area:colL;grid-auto-rows:min-content;align-content:start;overflow:auto}
+  .colM{grid-area:colM;grid-template-rows:auto auto minmax(0,1.25fr) minmax(0,1fr)}
+  .colR{grid-area:colR;grid-template-rows:minmax(0,1fr);align-content:stretch;min-height:0;overflow:auto}
+  /* center: diagram (natural), big stat row, timeline fills the rest */
+  #stage{min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #stage>#diag{width:100%;height:auto;max-height:100%;display:block}
+  .tlwrap,.latwrap{min-height:0;display:flex;flex-direction:column;gap:6px}
+  #tl{flex:1 1 auto;width:100%;height:auto;min-height:110px}
+  #lat{flex:1 1 auto;width:100%;height:auto;min-height:90px}
+  .latwrap h2{flex:none}
+  .legend,.tlctl{flex:none}
+  /* big central live numbers */
+  .readouts{grid-template-columns:repeat(3,1fr);gap:10px}
+  .ro{padding:9px 13px}
+  .ro .v{font-size:32px}
+  .ro .k{font-size:13px}
+  /* right column: events + summary + comparison, scroll within */
+  .colR{display:block}
+  .colR .cols{display:grid;grid-template-columns:1fr;gap:10px}
+  .colR>*{margin-bottom:10px}
+  /* compact controls so the whole left column fits without scrolling */
+  .colL{gap:7px}
+  .panel.video .vbox{aspect-ratio:16/9;max-width:100%;margin:0 auto}
+  .panel.video .bar{padding:5px 9px}
+  .sched .desc{display:none}
+  .bar{padding:6px 9px;gap:5px 8px}
+  .panel.bar{padding:6px 9px}
+  h2{margin-bottom:5px}
+  .ro .chips{gap:4px}
+  .ro .chip{font-size:10px;padding:1px 6px}
+  /* right column tables: smaller, scroll inside */
+  .colR table{font-size:12px}
+  .colR th,.colR td{padding:4px 7px}
+  .colR .note{font-size:11px;margin-top:5px}
+}
+</style>
+
+<div class="wrap" id="app">
+  <header>
+    <h1>Digital Twin MPTCP</h1>
+    <p class="sub">Camera stream from the RPi OMR gateway to the DigitalOcean VPS over two cellular links. When a link drops you can see where the traffic moves and how long the stream stalls. In LIVE mode the MPTCP scheduler can be switched one at a time and compared.</p>
+  </header>
+
+  <div class="colL">
+  <div class="panel bar">
+    <label for="preset">Data</label>
+    <select id="preset"></select>
+    <span class="filebtn" role="button" tabindex="0">Load test results…<input id="file" type="file" accept=".gz,.tgz,.csv,.txt" multiple></span>
+    <button id="starttest" hidden>Start auto test (7 min)</button>
+    <span id="msg"></span>
+    <span class="spacer"></span>
+    <button id="play" aria-label="Play or pause">▶ Play</button>
+    <span role="group" aria-label="Speed" id="speeds"></span>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+
+  <div class="panel video" id="videop">
+    <div class="bar">
+      <label for="vpath">Camera</label>
+      <select id="vpath">
+        <option value="live/cam">live/cam · C270 via laptop (RTMP)</option>
+        <option value="dlink">dlink · D-Link main stream</option>
+        <option value="dlink_sub">dlink_sub · D-Link sub-stream</option>
+      </select>
+      <span role="group" aria-label="Player" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
+      <button id="vreload">Reload</button>
+      <button id="vtoggle">Hide video</button>
+      <a id="vopen" target="_blank" rel="noopener">Open in new tab ↗</a>
+      <span id="vnote"></span>
+    </div>
+    <div class="vwrap" id="vbox"><div class="vbox"><iframe id="vframe" title="Camera stream from the VPS" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsg" hidden></div></div></div>
+  </div>
+
+  <div class="panel sched" id="schedp" hidden>
+    <div class="bar">
+      <label for="schedsel">Scheduler</label>
+      <select id="schedsel"></select>
+      <span class="chip" id="schedcur">active: –</span>
+      <button id="schedapply">Apply</button>
+      <button id="schedtest" class="primary">Apply + 7-min auto test</button>
+      <button id="scheddef">Back to default</button>
+      <span id="schedmsg"></span>
+    </div>
+    <p class="desc" id="scheddesc"></p>
+  </div>
+
+  <div class="panel sched" id="vpnp" hidden>
+    <div class="bar">
+      <label for="vpnsel">Transport</label>
+      <select id="vpnsel"></select>
+      <span class="chip" id="vpncur">–</span>
+      <button id="vpnapply" class="primary">Switch</button>
+      <span id="vpnmsg"></span>
+    </div>
+    <p class="desc" id="vpndesc"></p>
+  </div>
+
+  <div class="panel sched" id="linkp" hidden>
+    <div class="bar">
+      <label>Links</label>
+      <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Cut</button></span>
+      <span class="lk"><i style="background:var(--singtel)"></i>Singtel <button class="cut" id="cut2" data-dev="wan2">Cut</button></span>
+      <label for="cutsecs">auto-restore after</label>
+      <select id="cutsecs"><option value="60">1 min</option><option value="120" selected>2 min</option><option value="300">5 min</option><option value="600">10 min</option></select>
+      <span class="spacer"></span>
+      <label>Primary path</label>
+      <span role="group" aria-label="Primary path" id="prio"><button data-m="auto">Both</button><button data-m="simba">Simba first</button><button data-m="singtel">Singtel first</button></span>
+    </div>
+    <p class="desc"><span id="linkmsg"></span> <b>Cut</b> drops all traffic on that link except to its own router (like losing the cellular signal); it restores itself after the chosen time, and only one link can be cut at a time so REDLAB keeps its SSH access. <b>Primary path</b> sets the MPTCP backup flag: “Singtel first” marks Simba as backup, so traffic moves to Singtel and Simba is only used if Singtel fails. Takes effect without restarting the tunnel.</p>
+  </div>
+
+  </div><!--/colL-->
+
+  <div class="colM">
+  <div class="panel" id="stage">
+    <canvas id="diag" width="1160" height="460" aria-label="Flow diagram from RPi to VPS over two links"></canvas>
+    <span class="status st-ok" id="status">Normal</span>
+  </div>
+
+  <div class="readouts">
+    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--simba)"></span>Simba · RUTM30 (wan1)</div><div class="v" id="v1">0 <small>kbps</small></div><div class="chips" id="c1"></div></div>
+    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--singtel)"></span>Singtel · RUTM16 (wan2)</div><div class="v" id="v2">0 <small>kbps</small></div><div class="chips" id="c2"></div></div>
+    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--ink)"></span>Total to VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
+  </div>
+
+  <div class="panel tlwrap">
+    <canvas id="tl" width="1160" height="190" aria-label="Upload per link over time; click to jump"></canvas>
+    <div class="legend">
+      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (bonding)</span>
+      <span><i class="lg-line" style="background:var(--simba)"></i>Simba kbps</span>
+      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel kbps</span>
+      <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i>stall (total &lt; 500 kbps)</span>
+      <span><i class="lg-box" style="background:var(--grid)"></i>link cut</span>
+      <span id="tlhint">Click or drag the chart to jump in time</span>
+    </div>
+    <div class="tlctl" id="tlctl" hidden>
+      <span role="group" aria-label="Time window" id="tlspan"><button data-s="120">2 min</button><button data-s="300" class="on">5 min</button><button data-s="900">15 min</button><button data-s="3600">1 h</button><button data-s="0">All</button></span>
+      <input type="range" id="tlpos" min="0" max="1000" value="1000" aria-label="Scroll the timeline">
+      <span class="pos" id="tlposlbl"></span>
+      <button id="tlfollow" class="on">● Follow live</button>
+    </div>
+  </div>
+
+  <div class="panel latwrap">
+    <h2>Latency · RTT to VPS per SIM</h2>
+    <canvas id="lat" width="1160" height="150" aria-label="Round-trip latency per SIM over time"></canvas>
+    <div class="legend">
+      <span><i class="lg-line" style="background:var(--simba)"></i>Simba RTT</span>
+      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel RTT</span>
+      <span><i class="lg-line" style="background:var(--ink)"></i>Tunnel RTT</span>
+      <span class="note">ms · lower is better · gap = packet lost</span>
+    </div>
+  </div>
+
+  </div><!--/colM-->
+
+  <div class="colR">
+  <div class="cols">
+    <div class="panel"><h2>Events</h2><ol class="ev" id="events"></ol><p class="note" id="pnote"></p></div>
+    <div class="panel"><h2>Summary per event</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"></tbody></table></div>
+      <p class="note">“Stall” = consecutive seconds with total upload &lt; 500 kbps after the event. The RPi queue is a model estimate (constant camera rate minus what was sent), not a measurement.</p></div>
+  </div>
+
+  <div class="panel cmp" id="cmpp" hidden>
+    <div class="hd"><h2>Scheduler comparison</h2><span class="spacer"></span><button id="cmpcsv">Export CSV</button><button id="cmpclear">Clear table</button></div>
+    <div class="tbl"><table><thead><tr><th>Scheduler</th><th>Start (UTC)</th><th>Duration</th><th>Avg total</th><th>Simba / Singtel</th><th>Stall seconds</th><th>Longest stall</th><th>Tunnel 2 subflows</th><th>Link cuts</th></tr></thead><tbody id="cmpb"></tbody></table></div>
+    <p class="note">One row = one scheduler period since it was applied. The <b>first 25 seconds</b> after a switch (OpenVPN tunnel restart) are not counted. Green = best in its column. The table is kept in this browser, so it survives a page reload. Compare rows with the same conditions (“Link cuts” column).</p>
+  </div>
+  </div><!--/colR-->
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script>
+const PRESETS = [];   // old test history not shown; page opens straight in LIVE
+const STALL = 500;
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let D = null;           // {name, start, rows:[[t,a,b,s1,s2]], events:[{t,label,kind,link}], note}
+let cur = 0, playing = !reduce, speed = 4, lastTs = 0;
+let parts = [], acc = [0,0,0,0], queue = 0, lastSimT = 0;
+
+/* ---------- data helpers ---------- */
+function hms(ep){ const d=new Date(ep*1000); return d.toISOString().substr(11,8); }
+function rowAt(t){ if(!D||!D.rows.length) return null; const r=D.rows; let lo=0,hi=r.length-1; if(t<=r[0][0]) return r[0];
+  while(lo<hi){const m=(lo+hi+1)>>1; if(r[m][0]<=t) lo=m; else hi=m-1;} return r[lo]; }
+function phys(t, link){ // physically cut? auto-test flag in live rows, else events
+  const rw=rowAt(t); if(rw && rw.length>=9) return rw[6+link]===1;
+  let down=false; for(const e of D.events){ if(e.link!==link) continue; if(e.t>t) break; down = e.kind==='down'; } return down; }
+function rate(){ const v=D.rows.map(r=>r[1]+r[2]).filter(x=>x>STALL).sort((a,b)=>a-b); return v.length? v[v.length>>1] : 2000; }
+function summary(){
+  const ev=[...D.events].sort((a,b)=>a.t-b.t), out=[];
+  ev.forEach((e,k)=>{ const end=Math.min(k<ev.length-1? ev[k+1].t-3 : e.t+150, e.t+150);
+    let run=0,mx=0,det=null;
+    for(const r of D.rows){ if(r[0]<e.t-3||r[0]>=end) continue;
+      if(r[1]+r[2]<STALL){run++; mx=Math.max(mx,run);} else run=0;
+      const st=r[2+e.link]; if(det===null && r[0]>=e.t && ((e.kind==='down'&&st===0)||(e.kind==='up'&&st===1))) det=r[0]-e.t; }
+    out.push({e,mx,det}); });
+  return out;
+}
+
+/* ---------- UI build ---------- */
+function setData(d){
+  D=d; d.events.sort((a,b)=>a.t-b.t); cur=0; parts=[]; queue=0; lastSimT=0; D.base=d.rows.length?rate():2000; if(!d.rows.length) return;
+  const ol=$('events'); ol.innerHTML='';
+  d.events.forEach((e,i)=>{ const li=document.createElement('li'); const b=document.createElement('button');
+    b.innerHTML=`<span class="t">+${fmt(e.t)}</span><span>${e.label}</span>`; b.onclick=()=>{cur=Math.max(0,e.t-6); draw(true);};
+    b.dataset.t=e.t; li.appendChild(b); ol.appendChild(li); });
+  $('pnote').textContent = d.note || '';
+  const tb=$('sum'); tb.innerHTML='';
+  summary().forEach(s=>{ const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${s.e.label}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} s</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'down':'up')+' +'+s.det+' s'}</td>`; tb.appendChild(tr); });
+  draw(true);
+}
+function fmt(s){ s=Math.max(0,Math.round(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+PRESETS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; $('preset').appendChild(o); });
+{ const o=document.createElement('option'); o.value='live'; o.textContent='● LIVE · RPi OMR now'; $('preset').prepend(o); }
+$('preset').onchange=e=>{ stopLive(); if(e.target.value==='live') startLive(); else setData(JSON.parse(JSON.stringify(PRESETS[e.target.value]))); };
+[1,4,10].forEach(s=>{ const b=document.createElement('button'); b.textContent=s+'×'; b.className=s===speed?'on':''; b.onclick=()=>{speed=s; [...$('speeds').children].forEach(x=>x.className=x===b?'on':'');}; $('speeds').appendChild(b); });
+$('play').onclick=()=>{ playing=!playing; if(playing && cur>=D.rows[D.rows.length-1][0]) cur=0; $('play').textContent=playing?'❚❚ Pause':'▶ Play'; };
+$('play').textContent=playing?'❚❚ Pause':'▶ Play';
+
+/* ---------- file loading (fotest_*.tar.gz, traffic.csv, marks.csv) ---------- */
+function untar(u8){ const files={}; let o=0; const td=new TextDecoder();
+  while(o+512<=u8.length){ const name=td.decode(u8.subarray(o,o+100)).replace(/\0.*$/s,''); if(!name) break;
+    const size=parseInt(td.decode(u8.subarray(o+124,o+136)).replace(/\0.*$/s,'').trim()||'0',8); o+=512;
+    files[name.split('/').pop()]=td.decode(u8.subarray(o,o+size)); o+=Math.ceil(size/512)*512; } return files; }
+function parseTraffic(txt){
+  const L=txt.trim().split(/\r?\n/), h=L[0].toLowerCase().split(','), ix=k=>h.findIndex(c=>c.includes(k));
+  const iE=h.indexOf('epoch'), iT=h.indexOf('time'), iA=h.findIndex(c=>c.includes('simba')&&c.includes('kbps')), iB=h.findIndex(c=>c.includes('singtel')&&c.includes('kbps'));
+  const iSA=h.findIndex(c=>c.includes('simba')&&c.includes('state')), iSB=h.findIndex(c=>c.includes('singtel')&&c.includes('state'));
+  if(iA<0||iB<0) throw new Error('Simba/Singtel kbps columns not found in the CSV.');
+  const toEp=s=>{const [H,M,S]=s.split(':').map(Number); return H*3600+M*60+S;};
+  const raw=L.slice(1).filter(Boolean).map(l=>l.split(','));
+  const ep=r=> iE>=0? +r[iE] : toEp(r[iT]);
+  const start=ep(raw[0]);
+  return {start, rows:raw.map(r=>[ep(r)-start,+r[iA],+r[iB],r[iSA]==='up'?1:0,r[iSB]==='up'?1:0])};
+}
+function labelEn(l){ return l.replace(/\s*\[auto:[^\]]*\]/,'').replace(/\b(CABUT|DOWN)\b/i,'Cut').replace(/\b(COLOK|UP)\b/i,'Restore').trim()+(l.includes('[auto:')?' (auto)':''); }
+function eventsFrom(f, start){
+  const plan=(f['plan.txt']||'').split(/\r?\n/).filter(Boolean).map(l=>{const [o,...lab]=l.split('|'); return {t:+o,label:lab.join('|')};});
+  const marks=(f['marks.csv']||'').split(/\r?\n/).filter(Boolean).map(l=>+l.split(',')[0]-start);
+  return plan.map(p=>{ let best=null,bd=46; marks.forEach(m=>{const d=Math.abs(m-p.t); if(d<bd){bd=d;best=m;}});
+    const lab=labelEn(p.label);
+    return {t: best!==null? best : p.t, label: lab, kind: /CABUT|DOWN/i.test(p.label)?'down':'up', link: /simba|wan1|rutm30/i.test(p.label)?1:2}; });
+}
+async function loadFiles(list){
+  try{
+    let f={};
+    for(const file of list){
+      if(/\.(t?gz)$/i.test(file.name)){ const buf=new Uint8Array(await file.arrayBuffer()); Object.assign(f, untar(pako.ungzip(buf))); }
+      else f[/marks/i.test(file.name)?'marks.csv':/plan/i.test(file.name)?'plan.txt':'traffic.csv']=await file.text();
+    }
+    if(!f['traffic.csv']) throw new Error('traffic.csv not found in the loaded files.');
+    const tr=parseTraffic(f['traffic.csv']); let start=tr.start;
+    if(f['start']) start=+f['start'].trim(), tr.rows.forEach(r=>r[0]+=tr.start-start);
+    const name=list[0].name.replace(/\.(tar\.gz|tgz|csv)$/,'');
+    const d={name, note:'Loaded from '+list[0].name, start, rows:tr.rows, events:eventsFrom(f,start)};
+    const o=document.createElement('option'); o.value=PRESETS.length; o.textContent=name; PRESETS.push(d); $('preset').appendChild(o); $('preset').value=o.value;
+    setData(JSON.parse(JSON.stringify(d))); $('msg').textContent=`Loaded: ${tr.rows.length} s, ${d.events.length} events.`;
+  }catch(err){ $('msg').textContent='Failed to load: '+err.message; }
+}
+$('file').onchange=e=>loadFiles([...e.target.files]);
+document.querySelector('.filebtn').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('file').click(); } };
+const app=$('app');
+app.addEventListener('dragover',e=>{e.preventDefault(); app.classList.add('drop');});
+app.addEventListener('dragleave',()=>app.classList.remove('drop'));
+app.addEventListener('drop',e=>{e.preventDefault(); app.classList.remove('drop'); loadFiles([...e.dataTransfer.files]);});
+
+/* ---------- diagram ---------- */
+const cv=$('diag'), cx=cv.getContext('2d');
+let G={};
+function layout(){
+  const w=cv.clientWidth, narrow=w<620, h=Math.round(narrow? w*0.95 : Math.max(300,w*0.4));
+  const dpr=devicePixelRatio||1; cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+'px'; cx.setTransform(dpr,0,0,dpr,0,0);
+  const P=(x,y)=>({x:x*w,y:y*h});
+  G={w,h,narrow,
+    cam:P(.07,.5), rpi:P(narrow?.13:.24,.5), vps:P(narrow?.87:.76,.5), view:P(.94,.5),
+    r1:P(.5,narrow?.2:.2), r2:P(.5,narrow?.8:.8)};
+  G.path1=[G.rpi,{x:G.rpi.x+(G.r1.x-G.rpi.x)*.5,y:G.r1.y},G.r1,{x:G.r1.x+(G.vps.x-G.r1.x)*.5,y:G.r1.y},G.vps];
+  G.path2=[G.rpi,{x:G.rpi.x+(G.r2.x-G.rpi.x)*.5,y:G.r2.y},G.r2,{x:G.r2.x+(G.vps.x-G.r2.x)*.5,y:G.r2.y},G.vps];
+}
+function bez(p0,c,p1,t){ const u=1-t; return {x:u*u*p0.x+2*u*t*c.x+t*t*p1.x, y:u*u*p0.y+2*u*t*c.y+t*t*p1.y}; }
+function onPath(path,t){ return t<.5? bez(path[0],path[1],path[2],t*2) : bez(path[2],path[3],path[4],(t-.5)*2); }
+function line(a,b,t){ return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t}; }
+function strokePath(path){ cx.beginPath(); cx.moveTo(path[0].x,path[0].y); cx.quadraticCurveTo(path[1].x,path[1].y,path[2].x,path[2].y); cx.quadraticCurveTo(path[3].x,path[3].y,path[4].x,path[4].y); cx.stroke(); }
+function node(p,title,subtitle,opt={}){
+  const fs=G.narrow?11:13, pw=G.narrow?78:132, ph=G.narrow?40:50;
+  cx.fillStyle=css('--surface'); cx.strokeStyle=opt.stroke||css('--line'); cx.lineWidth=opt.stroke?2:1.2;
+  cx.beginPath(); cx.roundRect(p.x-pw/2,p.y-ph/2,pw,ph,8); cx.fill(); cx.stroke();
+  cx.fillStyle=css('--ink'); cx.font=`600 ${fs}px ${css('--sans')}`; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(title,p.x,p.y-(subtitle?7:0));
+  if(subtitle){ cx.fillStyle=css('--muted'); cx.font=`400 ${fs-2}px ${css('--sans')}`; cx.fillText(subtitle,p.x,p.y+9); }
+}
+function drawDiagram(row, dtReal){
+  const {w,h}=G; cx.clearRect(0,0,w,h);
+  const c1=css('--simba'), c2=css('--singtel'), ink=css('--ink'), mut=css('--muted'), line_=css('--line'), stall=css('--stall');
+  const a=row[1], b=row[2], tot=a+b, cut1=phys(cur,1), cut2=phys(cur,2);
+  const pipes=[[G.path1,c1,cut1,a,'Simba · RUTM30'],[G.path2,c2,cut2,b,'Singtel · RUTM16']];
+  // pipes
+  for(const [p,col,cut,kb] of pipes){
+    cx.lineCap='round'; cx.setLineDash([]);
+    cx.strokeStyle=line_; cx.lineWidth=G.narrow?14:20; strokePath(p);
+    cx.strokeStyle=cut? css('--grid') : col; cx.globalAlpha=cut?1:.18+.5*Math.min(1,kb/3000); cx.lineWidth=G.narrow?8:12;
+    if(cut) cx.setLineDash([6,8]); strokePath(p); cx.setLineDash([]); cx.globalAlpha=1;
+  }
+  cx.strokeStyle=line_; cx.lineWidth=G.narrow?8:12; (G.narrow?[]:[[G.cam,G.rpi],[G.vps,G.view]]).forEach(([s,e])=>{cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke();});
+  // particles
+  const k = reduce? 1.2 : 4.5; // particles per Mbps per real second
+  const spawn=[[0,a,null],[1,b,null],[2,D.base,'in'],[3,tot,'out']];
+  for(const [i,kb] of spawn){ acc[i]+= kb/1000*k*dtReal; while(acc[i]>=1){ acc[i]-=1; parts.push({lane:i,t:0}); } }
+  const travel=[1.6,2.4,.7,.7]; // Singtel lebih lambat (RTT ~100 ms vs ~13 ms), hanya ilustrasi
+  parts=parts.filter(q=>{ q.t+=dtReal/travel[q.lane]; return q.t<1; });
+  for(const q of parts){ let p,col;
+    if(G.narrow&&q.lane>1) continue; if(q.lane===0){p=onPath(G.path1,q.t);col=c1;} else if(q.lane===1){p=onPath(G.path2,q.t);col=c2;}
+    else if(q.lane===2){p=line(G.cam,G.rpi,q.t);col=mut;} else {p=line(G.vps,G.view,q.t);col=ink;}
+    cx.fillStyle=col; cx.beginPath(); cx.arc(p.x,p.y,G.narrow?2.4:3.2,0,7); cx.fill(); }
+  // router badges + cut marks
+  for(const [p,col,cut,kb,name] of pipes){ const m=p[2];
+    node(m, name.split(' · ')[1], name.split(' · ')[0]+' · '+Math.round(kb)+' kbps',{stroke:cut?stall:col});
+    if(cut){ cx.strokeStyle=stall; cx.lineWidth=3; const s=G.narrow?7:9, x=m.x+(G.narrow?44:72), y=m.y; cx.beginPath(); cx.moveTo(x-s,y-s); cx.lineTo(x+s,y+s); cx.moveTo(x+s,y-s); cx.lineTo(x-s,y+s); cx.stroke();
+      cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='left'; cx.fillText('DICABUT',x+s+4,y); }
+  }
+  if(!G.narrow){ node(G.cam,'Camera','stream'); node(G.view,'Viewer','HLS/RTSP'); } node(G.rpi,'RPi OMR',G.narrow?'+ camera':'MPTCP'); node(G.vps,'VPS DO',G.narrow?'+ viewer':'MediaMTX');
+  // queue (model)
+  if(queue>3000){ const kb=Math.round(queue/8); cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='center';
+    cx.fillText(`queue ≈ ${kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB'}`, G.rpi.x, G.rpi.y+(G.narrow?34:44)); }
+  // share labels on pipes
+  cx.font=`500 ${G.narrow?10:12}px ${css('--mono')}`; cx.textAlign='center'; cx.fillStyle=mut;
+  const sh1= tot>0? Math.round(a/tot*100):0;
+  if(tot>STALL){ cx.fillText(sh1+'%', (G.rpi.x+G.r1.x)/2, G.r1.y+(G.narrow?-14:-18)); cx.fillText((100-sh1)+'%', (G.rpi.x+G.r2.x)/2, G.r2.y+(G.narrow?22:26)); }
+}
+
+/* ---------- timeline ---------- */
+const tv=$('tl'), tx=tv.getContext('2d'); let TL={};
+function tlLayout(){ const w=tv.clientWidth,h=190,dpr=devicePixelRatio||1; tv.width=w*dpr; tv.height=h*dpr; tx.setTransform(dpr,0,0,dpr,0,0); TL={w,h,l:44,r:10,t:10,b:24}; }
+function drawTL(){
+  const {w,h,l,r,t,b}=TL, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2), ymax=Math.max(4000,...rows.map(x=>x[1]+x[2]))*1.05;
+  const X=s=>l+(w-l-r)*(Math.min(T,Math.max(t0,s))-t0)/(T-t0), Y=v=>t+(h-t-b)*(1-v/ymax);
+  tx.clearRect(0,0,w,h);
+  // cut spans
+  for(const link of [1,2]){ let s=null; const ev=D.events.filter(e=>e.link===link);
+    ev.forEach(e=>{ if(e.kind==='down') s=e.t; else if(s!==null){ tx.fillStyle=css('--grid'); tx.fillRect(X(s),t,X(e.t)-X(s),h-t-b); s=null; } });
+    if(s!==null){ tx.fillStyle=css('--grid'); tx.fillRect(X(s),t,X(T)-X(s),h-t-b); } }
+  // stall spans
+  tx.fillStyle=css('--stall'); tx.globalAlpha=.2; let s0=null;
+  rows.forEach((x,i)=>{ const st=x[1]+x[2]<STALL; if(st&&s0===null) s0=x[0]; if((!st||i===rows.length-1)&&s0!==null){ tx.fillRect(X(s0),t,Math.max(2,X(x[0])-X(s0)),h-t-b); s0=null; } });
+  tx.globalAlpha=1;
+  // grid + axis
+  tx.strokeStyle=css('--grid'); tx.lineWidth=1; tx.fillStyle=css('--muted'); tx.font=`11px ${css('--mono')}`; tx.textAlign='right'; tx.textBaseline='middle';
+  const step=ymax>6000?2000:1000; for(let v=0;v<=ymax;v+=step){ tx.beginPath(); tx.moveTo(l,Y(v)); tx.lineTo(w-r,Y(v)); tx.stroke(); tx.fillText((v/1000)+'M',l-6,Y(v)); }
+  tx.textAlign='center'; tx.textBaseline='top'; const tstep=[10,15,30,60,120,300,600,900,1800,3600,7200].find(s=>(T-t0)/s<=Math.max(3,w/110))||7200;
+  for(let s=Math.ceil(t0/tstep)*tstep;s<=T;s+=tstep) tx.fillText(D.live?hms(D.start+s):fmt(s),X(s),h-b+6);
+  // auto-cut spans from live rows
+  if(D.live){ for(const k of [7,8]){ tx.fillStyle=css('--grid'); rows.forEach((x,i)=>{ if(x[k]===1&&i){ tx.fillRect(X(rows[i-1][0]),t,Math.max(1,X(x[0])-X(rows[i-1][0])),h-t-b); } }); } }
+  // lines: per-link, then total (bonding) on top
+  [[1,css('--simba')],[2,css('--singtel')]].forEach(([i,col])=>{ tx.strokeStyle=col; tx.lineWidth=1.4; tx.globalAlpha=.9; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[i]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke(); });
+  tx.globalAlpha=1; tx.strokeStyle=css('--ink'); tx.lineWidth=2.2; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[1]+x[2]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke();
+  // events
+  tx.setLineDash([3,3]); tx.strokeStyle=css('--muted'); D.events.forEach(e=>{ if(e.t<t0||e.t>T) return; tx.beginPath(); tx.moveTo(X(e.t),t); tx.lineTo(X(e.t),h-b); tx.stroke(); }); tx.setLineDash([]);
+  // scheduler changes (live)
+  if(D.live && SC.log.length){ tx.font=`600 10.5px ${css('--sans')}`; tx.textAlign='left'; tx.textBaseline='top';
+    SC.log.forEach(([ep,name,init])=>{ const s=ep-D.start; if(init||s<t0||s>T) return; const x=X(s);
+      tx.fillStyle=css('--grid'); tx.globalAlpha=.55; tx.fillRect(x,t,Math.max(1,X(s+SETTLE)-x),h-t-b); tx.globalAlpha=1;
+      tx.strokeStyle=css('--ink'); tx.lineWidth=1.5; tx.beginPath(); tx.moveTo(x,t); tx.lineTo(x,h-b); tx.stroke();
+      const lb=name.replace('bpf_',''); const wl=tx.measureText(lb).width+8, lx=Math.min(x+3,w-r-wl);
+      tx.fillStyle=css('--surface'); tx.fillRect(lx,t+1,wl,15); tx.fillStyle=css('--ink'); tx.fillText(lb,lx+4,t+3); }); }
+  // playhead
+  if(cur>=t0&&cur<=T){ tx.strokeStyle=css('--ink'); tx.lineWidth=2; tx.beginPath(); tx.moveTo(X(cur),t); tx.lineTo(X(cur),h-b); tx.stroke(); }
+  TL.X=X; TL.T=T; TL.t0=t0; syncSlider(t0,T);
+}
+/* ---------- latency (RTT to VPS per SIM) ---------- */
+const lv=$('lat'), lc=lv.getContext('2d'); let LAT={};
+function latLayout(){ const w=lv.clientWidth,h=150,dpr=devicePixelRatio||1; lv.width=w*dpr; lv.height=h*dpr; lc.setTransform(dpr,0,0,dpr,0,0); LAT={w,h,l:44,r:10,t:10,b:22}; }
+function drawLat(){
+  if(!D||!D.rows.length||!LAT.w) return;
+  const {w,h,l,r,t,b}=LAT, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2);
+  const has=rows.some(x=>x.length>9 && [9,10,11].some(i=>x[i]>=0));
+  lc.clearRect(0,0,w,h);
+  const vals=[]; rows.forEach(x=>{ for(const i of [9,10,11]){ const v=x[i]; if(v!=null&&v>=0) vals.push(v); } });
+  const ymax=Math.max(50,...vals)*1.15;
+  const X=s=>l+(w-l-r)*(Math.min(T,Math.max(t0,s))-t0)/(T-t0), Y=v=>t+(h-t-b)*(1-Math.min(v,ymax)/ymax);
+  lc.strokeStyle=css('--grid'); lc.lineWidth=1; lc.fillStyle=css('--muted'); lc.font=`11px ${css('--mono')}`; lc.textAlign='right'; lc.textBaseline='middle';
+  const step= ymax>400?100: ymax>150?50:25;
+  for(let v=0;v<=ymax;v+=step){ lc.beginPath(); lc.moveTo(l,Y(v)); lc.lineTo(w-r,Y(v)); lc.stroke(); lc.fillText(v,l-6,Y(v)); }
+  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('waiting for latency samples…',w/2,h/2); return; }
+  [[9,css('--simba'),1.5],[10,css('--singtel'),1.5],[11,css('--ink'),2]].forEach(([i,col,lw])=>{
+    lc.strokeStyle=col; lc.lineWidth=lw; lc.beginPath(); let pen=false;
+    rows.forEach(x=>{ const v=x[i]; if(v==null||v<0){ pen=false; return; } const px=X(x[0]),py=Y(v); pen?lc.lineTo(px,py):lc.moveTo(px,py); pen=true; }); lc.stroke(); });
+  if(cur>=t0&&cur<=T){ lc.strokeStyle=css('--ink'); lc.globalAlpha=.35; lc.lineWidth=1.5; lc.beginPath(); lc.moveTo(X(cur),t); lc.lineTo(X(cur),h-b); lc.stroke(); lc.globalAlpha=1; }
+}
+/* view window for LIVE: span seconds, follow the newest sample or a fixed end */
+const VIEW={span:300, follow:true, end:0};
+function bounds(){ const a=D.rows[0][0], z=D.rows[D.rows.length-1][0]; return [a, Math.max(a+1,z)]; }
+function viewRange(){ const [a,z]=bounds(); if(!D.live||!VIEW.span) return [a,z];
+  const span=Math.min(VIEW.span, z-a); const end= VIEW.follow? z : Math.max(a+span, Math.min(z, VIEW.end)); return [end-span, Math.max(end-span+1,end)]; }
+function syncSlider(t0,T){ if(!D.live) return; const [a,z]=bounds(), room=(z-a)-(T-t0), el=$('tlpos');
+  if(document.activeElement!==el) el.value= room<=0?1000:Math.round((T-t0-(T-t0)+(t0-a))/room*1000);
+  el.disabled=room<=0; $('tlposlbl').textContent=VIEW.follow?'':hms(D.start+t0).slice(0,8)+' – '+hms(D.start+T).slice(0,8);
+  $('tlfollow').className=VIEW.follow?'on':''; }
+$('tlpos').oninput=e=>{ if(!D||!D.live) return; const [a,z]=bounds(), span=Math.min(VIEW.span||z-a, z-a), room=(z-a)-span;
+  const v=+e.target.value; VIEW.follow= v>=1000; VIEW.end=a+span+room*v/1000; draw(false); };
+$('tlfollow').onclick=()=>{ VIEW.follow=true; if(D) draw(false); };
+[...$('tlspan').children].forEach(bn=>bn.onclick=()=>{ VIEW.span=+bn.dataset.s; [...$('tlspan').children].forEach(x=>x.className=x===bn?'on':''); if(D) draw(false); });
+let panFrom=null;
+function seek(ev){ const rc=tv.getBoundingClientRect(); const x=(ev.touches?ev.touches[0].clientX:ev.clientX)-rc.left;
+  if(D.live){ if(!panFrom) return; const [a,z]=bounds(), span=TL.T-TL.t0, dt=-(x-panFrom.x)/(TL.w-TL.l-TL.r)*span;
+    const end=Math.max(a+span, Math.min(z, panFrom.end+dt)); VIEW.follow= end>=z-0.5; VIEW.end=end; draw(false); return; } cur=Math.max(0,Math.min(TL.T,TL.t0+(x-TL.l)/(TL.w-TL.l-TL.r)*(TL.T-TL.t0))); queue=0; draw(true); }
+let drag=false; tv.addEventListener('pointerdown',e=>{drag=true; tv.setPointerCapture(e.pointerId); if(D&&D.live){ panFrom={x:e.clientX-tv.getBoundingClientRect().left, end:TL.T}; } seek(e);}); tv.addEventListener('pointermove',e=>{ if(drag) seek(e); }); tv.addEventListener('pointerup',()=>{drag=false; panFrom=null;});
+
+/* ---------- readouts ---------- */
+function chips(el,list){ el.innerHTML=list.map(([t,c])=>`<span class="chip ${c||''}">${t}</span>`).join(''); }
+function readouts(row){
+  const a=row[1], b=row[2], tot=a+b;
+  $('v1').innerHTML=`${a} <small>kbps</small>`; $('v2').innerHTML=`${b} <small>kbps</small>`; $('v3').innerHTML=`${tot} <small>kbps</small>`;
+  const c1=phys(cur,1), c2=phys(cur,2);
+  const tun=row.length>=7, t1=tun?[['OpenVPN tunnel: '+(row[5]?'has subflow':'NO subflow'),row[5]?'ok':'bad']]:[], t2=tun?[['OpenVPN tunnel: '+(row[6]?'has subflow':'NO subflow'),row[6]?'ok':'bad']]:[];
+  const rttc=v=>(v==null)?null:(v<0?['RTT: no reply','bad']:['RTT '+v+' ms']);
+  const q1=rttc(row[9]), q2=rttc(row[10]), qt=rttc(row[11]);
+  chips($('c1'),[[c1?'cable/signal cut':'connected',c1?'bad':'ok'],['status OMR: '+(row[3]?'up':'down'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'% of traffic'],...(q1?[q1]:[]),...t1]);
+  chips($('c2'),[[c2?'cable/signal cut':'connected',c2?'bad':'ok'],['status OMR: '+(row[4]?'up':'down'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'% of traffic'],...(q2?[q2]:[]),...t2]);
+  const stalled=tot<STALL;
+  const sc = D.live && SC.log.length ? schedAt(D.start+row[0]).name : null;
+  chips($('c3'),[[stalled?'STALLED':'flowing',stalled?'bad':'ok'],['camera rate ≈ '+D.base+' kbps'],...(qt?[qt]:[]),...(sc?[['scheduler: '+sc]]:[])]);
+  const st=$('status');
+  if(stalled){ st.textContent='Stalled · stream stopped'; st.className='status st-stall'; }
+  else if(c1||c2){ st.textContent='Failover · 1 link'; st.className='status st-fo'; }
+  else { st.textContent='Normal · 2 links'; st.className='status st-ok'; }
+  $('clock').textContent= D.live ? `● LIVE ${hms(D.start+cur)} UTC` : `${hms(D.start+cur)} UTC  ·  +${fmt(cur)}`;
+  document.querySelectorAll('#events button').forEach(bn=>{ const t=+bn.dataset.t; bn.classList.toggle('cur', cur>=t && cur<t+20); });
+}
+
+
+/* ---------- live (server MCP lokal host:omr-twin di aplikasi Claude desktop) ---------- */
+const HOST='host:omr-twin';
+let LV={on:false, timer:null, since:0, mcp:null, mode:null, busy:false, fails:0, testRunning:false};
+async function fetchLive(since){
+  if(LV.mode==='http'){ const r=await fetch('api/live?since='+since,{cache:'no-store'}); if(!r.ok) throw {code:'tool_error',message:'HTTP '+r.status+' '+(await r.text()).slice(0,120)}; return await r.json(); }
+  const r=await LV.mcp.callTool(HOST,'omr_live',{since},{cache:false}); return r.payload||{};
+}
+function liveMsg(t){ $('msg').textContent=t; }
+function liveErr(e){
+  const c=e&&e.code;
+  if(c==='server_not_connected') liveMsg('Live mode needs the local server: run twin/live_server.py on REDLAB and open http://localhost:8799.');
+  else if(c==='not_in_manifest') liveMsg('Access to the local server was denied for this page.');
+  else if(c==='approval_required') liveMsg('Approval needed: select LIVE again and choose Allow.');
+  else if(c==='cancelled') liveMsg('Cancelled in the app.');
+  else if(c==='tool_error') liveMsg('RPi not reachable from REDLAB: '+String(e.message||'').slice(0,160));
+  else liveMsg('Live interrupted ('+(c||'error')+'), retrying…');
+  return c;
+}
+function liveEvents(test){
+  if(!test||!test.start) return [];
+  const marks=test.marks.map(m=>m.epoch);
+  return test.plan.map(p=>{ let ep=test.start+p.t, best=null, bd=46; marks.forEach(m=>{const d=Math.abs(m-ep); if(d<bd){bd=d;best=m;}});
+    if(best!==null) ep=best;
+    return {t:ep-D.start, label:labelEn(p.label), kind:/CABUT|DOWN/i.test(p.label)?'down':'up', link:/simba|wan1|rutm30/i.test(p.label)?1:2};
+  }).filter(e=>e.t>=D.rows[0][0]-60);
+}
+async function poll(){
+  if(!LV.on||LV.busy) return; LV.busy=true;
+  try{
+    const p=await fetchLive(LV.since); LV.fails=0;
+    const rows=(p.rows||[]).filter(x=>x[0]>LV.since);
+    if(rows.length){
+      if(!D||!D.live){ setData({name:'LIVE', live:true, note:'Live data from the RPi OMR (1 Hz samples, about 3 s behind). Link cuts from the auto test or the Cut buttons are marked automatically.', start:rows[0][0], rows:[], events:[]}); }
+      rows.forEach(x=>D.rows.push([x[0]-D.start, ...x.slice(1)]));
+      schedAccumulate(rows);
+      LV.since=rows[rows.length-1][0];
+      if(D.rows.length>7200) D.rows.splice(0,D.rows.length-7200);
+      D.base=rate();
+      const ev=liveEvents(p.test).concat(manualEvents(p.manual)).sort((x,y)=>x.t-y.t); const sig=JSON.stringify(ev);
+      if(sig!==LV.evsig){ LV.evsig=sig; D.events=ev; refreshLists(); }
+      const run=p.test&&!p.test.done; LV.testRunning=!!run; schedButtons(); $('starttest').disabled=!!run; $('starttest').textContent= run?'Auto test running…':'Start auto test (7 min)';
+      liveMsg('Live connected · '+new Date(p.now*1000).toISOString().substr(11,8)+' UTC');
+    }
+  }catch(e){ const c=liveErr(e); LV.fails++; if(['server_not_connected','not_in_manifest','not_granted','capability_disabled'].includes(c)){ stopLive(); } }
+  finally{ LV.busy=false; }
+}
+async function startLive(){
+  liveMsg('Connecting to the RPi…');
+  let mcp = (window.claude && window.claude.use) ? await window.claude.use('mcp') : null, mode = mcp ? 'mcp' : null;
+  if(!mcp){ try{ const r=await fetch('api/live?since=0',{cache:'no-store'}); if(r.ok) mode='http'; }catch(e){} }
+  if(!mode){ liveMsg(location.protocol==='file:'
+      ? 'This file was opened from disk, so it cannot fetch RPi data. Save it as twin/index.html, run "python3 live_server.py" in the twin folder, then open http://localhost:8799.'
+      : 'Live mode is not available here. Open http://localhost:8799 on REDLAB (run twin/live_server.py).'); return; }
+  LV={on:true, timer:null, since:0, mcp, mode, busy:false, fails:0, evsig:'', testRunning:false};
+  liveMsg(mode==='http'?'Connecting via the REDLAB local server…':'Connecting via the Claude app…');
+  D=null; $('starttest').hidden=false; playing=true; $('play').hidden=true; $('speeds').hidden=true;
+  await poll(); LV.timer=setInterval(poll,2500);
+  schedStart(); vpnStart(); linkStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
+}
+function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); }
+$('starttest').onclick=()=>startTest();
+async function startTest(){
+  if(!LV.on) return false; $('starttest').disabled=true; liveMsg('Starting auto test on the RPi…');
+  try{ let p; if(LV.mode==='http'){ const r=await fetch('api/start-test?duration=420',{method:'POST'}); p=await r.json(); } else { const r=await LV.mcp.callTool(HOST,'omr_start_test',{duration:420},{cache:false}); p=r.payload||{}; }
+    liveMsg(p.started?'Auto test started. Singtel is cut at second 30.':'Test not started: '+String(p.console||'').split('\n').slice(-3).join(' ')); return !!p.started; }
+  catch(e){ liveErr(e); $('starttest').disabled=false; return false; }
+}
+function refreshLists(){
+  const ol=$('events'); ol.innerHTML='';
+  D.events.forEach(e=>{ const li=document.createElement('li'); const b=document.createElement('button');
+    b.innerHTML=`<span class="t">${hms(D.start+e.t).substr(0,8)}</span><span>${e.label}</span>`; b.dataset.t=e.t; li.appendChild(b); ol.appendChild(li); });
+  const tb=$('sum'); tb.innerHTML='';
+  summary().forEach(s=>{ const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${s.e.label}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} s</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'down':'up')+' +'+s.det+' s'}</td>`; tb.appendChild(tr); });
+  $('pnote').textContent=D.note||'';
+}
+
+/* ---------- scheduler test (only via local server live_server.py) ---------- */
+const SETTLE=25;   // seconds after a switch that are not counted (tunnel restart)
+const SCHED_INFO={
+  default:'<b>default</b> — kernel built-in. Fills the lowest-RTT subflow first (Simba ≈11 ms), the rest goes to the other subflow. Baseline for comparison.',
+  bpf_minrtt:'<b>bpf_minrtt</b> — always picks the subflow with the smallest RTT. Likely similar to default, with Simba even more dominant.',
+  bpf_rr:'<b>bpf_rr</b> — round-robin, alternates between subflows. <span class="warn">Earlier test: the second subflow never formed / got lost.</span> Watch the “OpenVPN tunnel” chip on the link cards.',
+  bpf_first:'<b>bpf_first</b> — always uses the first subflow; the others are only backup when it disappears. Good for observing pure failover.',
+  bpf_bkup:'<b>bpf_bkup</b> — uses only non-backup subflows; backup subflows are used when the primary dies. Without endpoints flagged as backup it behaves like default.',
+  bpf_burst:'<b>bpf_burst</b> — like default, but sends in bursts to the best subflow. Watch whether the stream gets burstier.',
+  bpf_red:'<b>bpf_red</b> — redundant (disabled). <span class="warn">On this kernel it breaks the OpenVPN --mptcp tunnel: the handshake never completes, tun0 stays down, and recovery needed a VPS reboot.</span> Do not use.'
+};
+let SC={cur:null, avail:[], log:[], busy:false, timer:null, run:{}};
+let STATS={}; try{ STATS=JSON.parse(localStorage.getItem('twin.schedstats.v1')||'{}')||{}; }catch(e){ STATS={}; }
+function saveStats(){ try{ localStorage.setItem('twin.schedstats.v1',JSON.stringify(STATS)); }catch(e){} }
+function schedMsg(t){ $('schedmsg').textContent=t; }
+function schedAt(ep){ // scheduler period active at epoch ep
+  const L=SC.log; if(!L.length) return {name:SC.cur||'?', start:0, init:true};
+  let k=0; for(let i=0;i<L.length;i++){ if(L[i][0]<=ep) k=i; else break; }
+  return {name:L[k][1], start:L[k][0], init:!!L[k][2] || ep<L[k][0]};
+}
+function schedAccumulate(rows){
+  if(!SC.log.length) return;
+  for(const x of rows){ const ep=x[0], seg=schedAt(ep); if(!seg.init && ep-seg.start<SETTLE) continue;
+    const key=seg.start+'|'+seg.name; const st=STATS[key]||(STATS[key]={name:seg.name,start:seg.start,first:ep,last:ep,n:0,a:0,b:0,stall:0,run:0,maxrun:0,full:0,tun:0,cut:0});
+    if(ep<=st.last && st.n) continue; st.last=ep; st.n++; st.a+=x[1]; st.b+=x[2];
+    if(x[1]+x[2]<STALL){ st.stall++; st.run++; st.maxrun=Math.max(st.maxrun,st.run); } else st.run=0;
+    if(x.length>=7){ st.tun++; if(x[5]&&x[6]) st.full++; }
+    if(x.length>=9 && (x[7]===1||x[8]===1)) st.cut=1; }
+  saveStats(); renderCmp();
+}
+function renderCmp(){
+  const list=Object.values(STATS).filter(s=>s.n>=5).sort((p,q)=>p.first-q.first);
+  $('cmpp').hidden=!list.length; if(!list.length) return;
+  const avg=s=>Math.round((s.a+s.b)/s.n), sh=s=>(s.a+s.b)?Math.round(s.a/(s.a+s.b)*100):0, full=s=>s.tun?Math.round(s.full/s.tun*100):null;
+  const best=(f,hi)=>{ const v=list.map(f).filter(x=>x!==null); if(v.length<2||Math.max(...v)===Math.min(...v)) return null; return hi?Math.max(...v):Math.min(...v); };
+  const bAvg=best(avg,1), bSt=best(s=>s.stall,0), bMx=best(s=>s.maxrun,0), bFull=best(full,1);
+  const curKey=SC.log.length? (()=>{const g=schedAt(Date.now()/1000); return g.start+'|'+g.name;})() : '';
+  $('cmpb').innerHTML=list.map(s=>{ const k=s.start+'|'+s.name, f=full(s);
+    return `<tr class="${k===curKey&&LV.on?'now':''}"><td>${k===curKey&&LV.on?'<span class="sdot" title="running now"></span>':''}${s.name}</td><td class="n">${hms(s.first)}</td><td class="n">${fmt(s.n)}</td>`+
+      `<td class="n ${avg(s)===bAvg?'best':''}">${avg(s)} kbps</td><td class="n">${sh(s)}% / ${100-sh(s)}%</td>`+
+      `<td class="n ${s.stall===bSt?'best':(s.stall>=5?'bad':'')}">${s.stall} s</td><td class="n ${s.maxrun===bMx?'best':(s.maxrun>=5?'bad':'')}">${s.maxrun} s</td>`+
+      `<td class="n ${f!==null&&f===bFull?'best':(f!==null&&f<90?'bad':'')}">${f===null?'–':f+'%'}</td><td>${s.cut?'yes':'no'}</td></tr>`; }).join('');
+}
+function schedButtons(){
+  const live=LV.on&&LV.mode==='http', dis=!live||SC.busy||LV.testRunning||!SC.avail.length;
+  ['schedapply','schedtest','scheddef','schedsel'].forEach(id=>$(id).disabled=dis);
+  if(live && !SC.busy && $('schedsel').value===SC.cur) $('schedapply').disabled=true;
+  if(live && !SC.busy && SC.cur==='default') $('scheddef').disabled=true;
+}
+function schedDesc(){ const n=$('schedsel').value; $('scheddesc').innerHTML=(SCHED_INFO[n]||('<b>'+n+'</b> — additional BPF scheduler on the RPi.'))+
+  ' Switching restarts the OpenVPN tunnel (stream pauses ≈10–20 s), because a scheduler only applies to new MPTCP connections. Not persistent: lost when the RPi reboots.'; }
+async function fetchSched(){
+  const r=await fetch('api/sched',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
+  const first=!SC.avail.length; SC.cur=p.current; SC.avail=(p.available||[]).filter(n=>n!=='bpf_red'); SC.log=(p.log||[]).sort((a,b)=>a[0]-b[0]);
+  const sel=$('schedsel'), keep=sel.value;
+  if(first || sel.options.length!==SC.avail.length){ sel.innerHTML=SC.avail.map(n=>`<option value="${n}">${n}${n===SC.cur?' (active)':''}</option>`).join(''); sel.value=keep&&SC.avail.includes(keep)?keep:SC.cur; }
+  [...sel.options].forEach(o=>o.textContent=o.value+(o.value===SC.cur?' (active)':''));
+  $('schedcur').textContent='active: '+SC.cur; $('schedcur').className='chip ok';
+  schedDesc(); schedButtons(); renderCmp(); if(D) draw(true);
+  return p;
+}
+async function schedStart(){
+  if(LV.mode!=='http'){ $('schedp').hidden=true; return; }
+  $('schedp').hidden=false; schedMsg('Reading scheduler on the RPi…');
+  try{ await fetchSched(); schedMsg(''); }
+  catch(e){ schedMsg('Scheduler control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
+  SC.timer=setInterval(()=>{ if(!SC.busy) fetchSched().catch(()=>{}); },15000);
+}
+function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
+
+/* ---------- transport / VPN switch (compare Glorytun UDP vs Glorytun TCP/MPTCP) ---------- */
+const VPN_INFO={
+  glorytun_udp:'<b>Glorytun UDP</b> — aggregates both SIMs over UDP (not kernel MPTCP). Most stable, both links share the load roughly evenly, normal latency. The MPTCP scheduler above has <b>no effect</b> here.',
+  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — the tunnel is one TCP connection bonded by kernel MPTCP across both SIMs (look for 2 subflows). The <b>scheduler above now affects the camera</b>. With very different link RTTs a single light stream leans to the low-RTT SIM and latency is higher (head-of-line blocking).'
+};
+const VP={cur:null,avail:[],busy:false,timer:null};
+function vpnDesc(){ $('vpndesc').innerHTML=VPN_INFO[$('vpnsel').value]||('<b>'+$('vpnsel').value+'</b>'); }
+function vpnMsg(t){ $('vpnmsg').textContent=t; }
+function vpnButtons(){ const dis=VP.busy||LV.testRunning; ['vpnsel','vpnapply'].forEach(id=>$(id).disabled=dis); if(!VP.busy&&$('vpnsel').value===VP.cur)$('vpnapply').disabled=true; }
+async function fetchVpn(){
+  const r=await fetch('api/vpn',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
+  VP.cur=p.current; VP.avail=p.available||[]; const sel=$('vpnsel');
+  if(sel.options.length!==VP.avail.length){ sel.innerHTML=VP.avail.map(n=>`<option value="${n}">${(p.labels&&p.labels[n])||n}</option>`).join(''); sel.value=VP.cur; }
+  if(!VP.busy) sel.value=VP.cur;
+  $('vpncur').textContent=((p.labels&&p.labels[VP.cur])||VP.cur)+(p.mptcp?' · MPTCP':'')+' · '+(p.status||'?');
+  $('vpncur').className='chip '+(p.status==='up'?'ok':'');
+  vpnDesc(); vpnButtons(); return p;
+}
+async function vpnApply(name){
+  if(name===VP.cur) return;
+  VP.busy=true; vpnButtons(); vpnMsg('Switching to '+name+'… restarts the tunnel (~30–60 s), camera pauses briefly.');
+  try{
+    const r=await fetch('api/vpn?name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
+    if(!r.ok||p.ok===false) throw new Error(p.error||('HTTP '+r.status));
+    VP.cur=p.current; vpnMsg('Now on '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Camera returns in a few seconds.');
+  }catch(e){ vpnMsg('Switch failed: '+String(e.message||e).slice(0,160)); }
+  VP.busy=false; await fetchVpn().catch(()=>{}); vpnButtons();
+}
+async function vpnStart(){
+  if(LV.mode!=='http'){ $('vpnp').hidden=true; return; }
+  $('vpnp').hidden=false; vpnMsg('Reading transport…');
+  try{ await fetchVpn(); vpnMsg(''); }catch(e){ vpnMsg('Transport control unavailable: '+String(e.message||e).slice(0,140)+'. Update live_server.py.'); }
+  VP.timer=setInterval(()=>{ if(!VP.busy) fetchVpn().catch(()=>{}); },15000);
+}
+function vpnStop(){ if(VP.timer) clearInterval(VP.timer); VP.timer=null; $('vpnp').hidden=true; }
+$('vpnsel').onchange=()=>{ vpnDesc(); vpnButtons(); };
+$('vpnapply').onclick=()=>vpnApply($('vpnsel').value);
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function waitTunnel(since, maxS){ // tunggu sampel live terbaru menunjukkan 2 subflow tunnel
+  const t0=Date.now();
+  while((Date.now()-t0)/1000<maxS){ await sleep(1500);
+    const last=D&&D.rows.length? D.rows[D.rows.length-1] : null;
+    if(last && D.start+last[0]>since+10 && last.length>=7 && last[5] && last[6]) return true;
+    schedMsg(`Waiting for the tunnel to return with 2 subflows… ${Math.round((Date.now()-t0)/1000)} s`); }
+  return false;
+}
+async function schedApply(name, thenTest){
+  if(SC.busy||!LV.on) return; SC.busy=true; schedButtons();
+  schedMsg(`Switching scheduler to ${name} and restarting the OpenVPN tunnel…`);
+  try{
+    const r=await fetch('api/sched?restart=1&name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
+    if(!r.ok||!p.ok) throw new Error(p.error||('HTTP '+r.status));
+    await fetchSched();
+    const ok=await waitTunnel(p.now||Date.now()/1000, 75);
+    if(!ok) schedMsg(`${name} active, but the tunnel has not returned to 2 subflows after 75 s (ovpn-guard will try to recover it).`);
+    else schedMsg(`${name} active · tunnel has 2 subflows.`);
+    if(thenTest){ await sleep(ok?5000:0); const started=await startTest(); schedMsg((ok?'':'⚠ tunnel not yet 2 subflows · ')+(started?`${name} active · 7-min auto test running. Results go into the comparison table.`:`${name} active, but the auto test did not start (see message above).`)); }
+  }catch(e){ schedMsg('Failed to switch scheduler: '+String(e.message||e).slice(0,160)); }
+  finally{ SC.busy=false; schedButtons(); }
+}
+$('schedsel').onchange=()=>{ schedDesc(); schedButtons(); };
+$('schedapply').onclick=()=>schedApply($('schedsel').value,false);
+$('schedtest').onclick=()=>schedApply($('schedsel').value,true);
+$('scheddef').onclick=()=>{ $('schedsel').value='default'; schedDesc(); schedApply('default',false); };
+$('cmpclear').onclick=()=>{ STATS={}; saveStats(); renderCmp(); };
+$('cmpcsv').onclick=()=>{
+  const list=Object.values(STATS).filter(s=>s.n>=5).sort((p,q)=>p.first-q.first);
+  const head='scheduler,start_utc,duration_s,avg_total_kbps,avg_simba_kbps,avg_singtel_kbps,simba_pct,stall_s,longest_stall_s,tunnel_2subflow_pct,link_cuts';
+  const lines=list.map(s=>[s.name,new Date(s.first*1000).toISOString(),s.n,Math.round((s.a+s.b)/s.n),Math.round(s.a/s.n),Math.round(s.b/s.n),(s.a+s.b)?Math.round(s.a/(s.a+s.b)*100):0,s.stall,s.maxrun,s.tun?Math.round(s.full/s.tun*100):'',s.cut?1:0].join(','));
+  const blob=new Blob([[head,...lines].join('\n')+'\n'],{type:'text/csv'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='scheduler_comparison_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'')+'.csv'; document.body.appendChild(a); a.click(); a.remove();
+};
+renderCmp();
+
+/* ---------- manual link cut + primary path (via live_server.py) ---------- */
+const LNAME={wan1:'Simba',wan2:'Singtel'};
+let LK={cut:{wan1:false,wan2:false}, mode:'auto', busy:false, timer:null};
+function manualEvents(list){ if(!list||!D||!D.rows.length) return [];
+  return list.map(m=>({t:m.ep-D.start, label:(m.kind==='down'?'Cut ':'Restore ')+LNAME[m.dev]+(m.how==='auto-restore'?' (auto-restore)':' (manual)'), kind:m.kind, link:m.dev==='wan1'?1:2}))
+    .filter(e=>e.t>=D.rows[0][0]-60); }
+function linkMsg(t){ $('linkmsg').textContent=t; }
+function renderLink(){
+  const live=LV.on&&LV.mode==='http';
+  [['cut1','wan1'],['cut2','wan2']].forEach(([id,d])=>{ const b=$(id), other=d==='wan1'?'wan2':'wan1';
+    b.textContent=LK.cut[d]?'Restore':'Cut'; b.classList.toggle('on',LK.cut[d]);
+    b.disabled=!live||LK.busy||(!LK.cut[d]&&LK.cut[other]); b.title=(!LK.cut[d]&&LK.cut[other])?'Restore '+LNAME[other]+' first: cutting both would drop the RPi connection':''; });
+  [...$('prio').children].forEach(b=>{ b.className=b.dataset.m===LK.mode?'on':''; b.disabled=!live||LK.busy; });
+  $('cutsecs').disabled=!live||LK.busy;
+}
+async function api(method,url){ const r=await fetch(url,{method,cache:'no-store'}); let p={}; try{ p=await r.json(); }catch(e){} if(!r.ok||p.ok===false||p.error) throw new Error(p.error||('HTTP '+r.status)); return p; }
+async function fetchLink(){ const p=await api('GET','api/link'); LK.cut=p.cut; LK.mode=p.mode; renderLink(); return p; }
+async function linkAction(dev){
+  if(LK.busy) return; LK.busy=true; renderLink();
+  const cutting=!LK.cut[dev], secs=$('cutsecs').value;
+  linkMsg(cutting?`Cutting ${LNAME[dev]}…`:`Restoring ${LNAME[dev]}…`);
+  try{ const p=await api('POST',`api/link?dev=${dev}&action=${cutting?'cut':'restore'}&secs=${secs}`); LK.cut=p.cut; LK.mode=p.mode;
+    linkMsg(cutting?`${LNAME[dev]} cut — restores itself in ${Math.round(secs/60)} min. OMR notices in ≈20–30 s.`:`${LNAME[dev]} restored. The tunnel subflow returns within ≈15–40 s (ovpn-guard helps).`); }
+  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
+  finally{ LK.busy=false; renderLink(); }
+}
+async function setPrio(m){
+  if(LK.busy||m===LK.mode) return; LK.busy=true; renderLink(); linkMsg('Setting primary path…');
+  try{ const p=await api('POST','api/prio?mode='+m); LK.mode=p.mode; LK.cut=p.cut;
+    linkMsg(m==='auto'?'Both links normal: the scheduler decides.':(m==='simba'?'Simba first: Singtel is backup.':'Singtel first: Simba is backup.')); }
+  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
+  finally{ LK.busy=false; renderLink(); }
+}
+$('cut1').onclick=()=>linkAction('wan1'); $('cut2').onclick=()=>linkAction('wan2');
+[...$('prio').children].forEach(b=>b.onclick=()=>setPrio(b.dataset.m));
+async function linkStart(){
+  if(LV.mode!=='http'){ $('linkp').hidden=true; return; }
+  $('linkp').hidden=false; renderLink();
+  try{ await fetchLink(); }catch(e){ linkMsg('Link control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
+  LK.timer=setInterval(()=>{ if(!LK.busy) fetchLink().catch(()=>{}); },10000);
+}
+function linkStop(){ if(LK.timer) clearInterval(LK.timer); LK.timer=null; $('linkp').hidden=true; }
+
+/* ---------- camera video (MediaMTX on the VPS) ---------- */
+const VPS='168.144.105.155';
+const VID={path:'live/cam', proto:'hls', on:true};
+try{ Object.assign(VID, JSON.parse(localStorage.getItem('twin.video.v1')||'{}')); }catch(e){}
+function vsave(){ try{ localStorage.setItem('twin.video.v1',JSON.stringify(VID)); }catch(e){} }
+function vurl(){ return VID.proto==='webrtc' ? `http://${VPS}:8889/${VID.path}/` : `http://${VPS}:8888/${VID.path}/`; }
+function vload(){
+  const u=vurl(), f=$('vframe'), m=$('vmsg');
+  $('vpath').value=VID.path; [...$('vproto').children].forEach(b=>b.className=b.dataset.p===VID.proto?'on':'');
+  $('vopen').href=u; $('vtoggle').textContent=VID.on?'Hide video':'Show video'; $('vbox').hidden=!VID.on;
+  $('vnote').textContent = VID.proto==='hls' ? 'HLS lags the live data by several seconds.' : 'WebRTC is near real-time; if it stays black, switch to HLS.';
+  if(location.protocol==='https:'){ f.removeAttribute('src'); m.hidden=false;
+    m.textContent='The video cannot play inside this claude.ai page (the VPS stream is plain HTTP). Open http://localhost:8799 on REDLAB, or use “Open in new tab”.'; return; }
+  m.hidden=true; if(VID.on){ if(f.getAttribute('src')!==u) f.src=u; } else f.removeAttribute('src');
+}
+$('vpath').onchange=e=>{ VID.path=e.target.value; vsave(); vload(); };
+[...$('vproto').children].forEach(b=>b.onclick=()=>{ VID.proto=b.dataset.p; vsave(); vload(); });
+$('vreload').onclick=()=>{ const f=$('vframe'); f.removeAttribute('src'); setTimeout(vload,50); };
+$('vtoggle').onclick=()=>{ VID.on=!VID.on; vsave(); vload(); };
+vload();
+
+/* ---------- loop ---------- */
+function draw(force){ if(!D||!D.rows.length) return; const row=rowAt(cur); if(!row) return; drawTL(); drawLat(); readouts(row); if(force) drawDiagram(row,0); }
+function frame(ts){
+  const dt=lastTs? Math.min(.1,(ts-lastTs)/1000):0; lastTs=ts;
+  if(D&&D.rows.length){
+    const end=D.rows[D.rows.length-1][0];
+    if(D.live){ const last=D.rows[D.rows.length-1][0]; cur=Math.min(last, Math.max(cur+dt, last-3.5)); }
+    else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Play'; } }
+    const row=rowAt(cur), simDt=cur-lastSimT; lastSimT=cur;
+    if(simDt>0 && simDt<5) queue=Math.max(0, queue + (D.base-(row[1]+row[2]))*simDt); else if(simDt<0||simDt>=5) queue=0;
+    drawDiagram(row,dt); drawTL(); drawLat(); readouts(row);
+  }
+  requestAnimationFrame(frame);
+}
+function resize(){ layout(); tlLayout(); latLayout(); if(D) draw(true); }
+addEventListener('resize',resize);
+try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
+resize();
+$('preset').value='live'; startLive();
+requestAnimationFrame(frame);
+</script>

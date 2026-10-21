@@ -1,0 +1,6 @@
+echo "GatewayPorts: $(grep -iE '^\s*GatewayPorts' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/* 2>/dev/null | head -1 || echo '(default=no)')"
+echo "socat: $(which socat 2>/dev/null || echo none)"
+echo "firewall tool: $(which ufw nft iptables 2>/dev/null | tr '\n' ' ')"
+echo "ufw status: $(ufw status 2>/dev/null | head -1)"
+echo "port 8080 listening now: $(ss -tlnp 2>/dev/null | grep -c ':8080')"
+echo "nft input policy (does it drop?): $(nft list chain inet fw4 input 2>/dev/null | grep -iE 'policy' | head -1 || iptables -L INPUT -n 2>/dev/null | head -1)"
