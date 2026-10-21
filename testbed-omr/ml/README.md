@@ -54,6 +54,7 @@ split them, as the two SIMs drift and degrade* — is what the agent learns.
 | `controller.py` | **Stage 3b** closed loop: live state → policy → drive the proxy |
 | `edge_control.py` | **Stage 4** Jetson brain: observe → policy → push split to RPi |
 | `run_stage4_demo.py` | **Stage 4** full-loop demo across Jetson + RPi + VPS |
+| `mptun.py` | **Stage 5** bidirectional multipath TCP tunnel — carries the live camera |
 
 ## Run
 
@@ -209,6 +210,34 @@ i.e. the edge brain's decisions reach the actuator and change the split while th
 stream runs. For production the Jetson belongs on the Omada switch, co-located
 with the RPi (lower-latency control than SSH-over-tailscale, which is what the
 demo uses).
+
+## Stage 5 — the live camera through the Jetson path (dashboard reflects it)
+
+`mptun.py` is a bidirectional multipath TCP tunnel for one connection: it carries
+the camera's RTSP-over-TCP through N sub-streams pinned per SIM (no ffmpeg, it
+just relays bytes). MediaMTX pulls a new path `dlink_mp` from the tunnel's local
+endpoint, so the live camera now rides both SIMs instead of the single glorytun
+tunnel — and the dashboard's per-SIM counters show it (select the `dlink_mp`
+camera source). The split `w` is read live from `/tmp/mptun_w`, which the Jetson
+writes via `edge_control.py --ctl /tmp/mptun_w`.
+
+Proven on hardware (camera ~1.2 Mbit/s, one viewer):
+- balanced: Simba 632 + Singtel 610 kbps
+- Jetson pushes w=1.0 → all Simba (1215 kbps); w=0.0 → all Singtel (1212 kbps)
+
+So the Jetson steers the live camera's per-SIM distribution in real time, and it
+is visible on the dashboard. Production `dlink` (glorytun) is left untouched and
+runs alongside `dlink_mp`.
+
+```
+RPi:  python3 mptun.py --role rpi --vps <ip> --cam 192.168.100.20:554 --ctl /tmp/mptun_w
+VPS:  python3 mptun.py --role vps --sub-port 5401 --local-port 5402 --conns 8
+```
+
+Caveats: `dlink_mp` is sourceOnDemand (flows only while viewed, saving data);
+always-on retries churn the single-session tunnel. The tunnel and the Jetson
+controller are started by hand here — a real deployment runs them as services
+(rc.local / systemd) and co-locates the Jetson on the Omada switch.
 
 ## Honest caveats
 

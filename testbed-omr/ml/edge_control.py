@@ -35,9 +35,9 @@ DEMO = [
 ]
 
 
-def push_w(w):
+def push_w(w, ctl=CTL_FILE):
     subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", RPI,
-                    f"echo {w:.3f} > {CTL_FILE}"], timeout=15)
+                    f"echo {w:.3f} > {ctl}"], timeout=15)
 
 
 def observe(cap1, cap2):
@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--demo", action="store_true")
     ap.add_argument("--cap1", type=float, default=16.0)
     ap.add_argument("--cap2", type=float, default=17.0)
+    ap.add_argument("--ctl", default=CTL_FILE, help="control file on the RPi (camera tunnel: /tmp/mptun_w)")
     a = ap.parse_args()
 
     print("edge controller: training policy ...")
@@ -65,7 +66,7 @@ def main():
         else:
             label, st = observe(a.cap1, a.cap2)
         n, w = decide(agent, st)
-        push_w(w)
+        push_w(w, a.ctl)
         print(f"{i:>6}{label:>16}{st.rtt1:7.0f}/{st.rtt2:4.0f}{('N=%d w=%.2f' % (n, w)):>14}")
         time.sleep(a.period)
     print("done.")

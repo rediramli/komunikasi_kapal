@@ -178,6 +178,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
         <option value="live/cam">live/cam · C270 via laptop (RTMP)</option>
         <option value="dlink">dlink · D-Link main stream</option>
         <option value="dlink_sub">dlink_sub · D-Link sub-stream</option>
+        <option value="dlink_mp">dlink_mp · D-Link via Jetson multipath</option>
       </select>
       <span role="group" aria-label="Player" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
       <button id="vreload">Reload</button>
@@ -224,6 +225,24 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
       <span role="group" aria-label="Primary path" id="prio"><button data-m="auto">Both</button><button data-m="simba">Simba first</button><button data-m="singtel">Singtel first</button></span>
     </div>
     <p class="desc"><span id="linkmsg"></span> <b>Cut</b> drops all traffic on that link except to its own router (like losing the cellular signal); it restores itself after the chosen time, and only one link can be cut at a time so REDLAB keeps its SSH access. <b>Primary path</b> sets the MPTCP backup flag: “Singtel first” marks Simba as backup, so traffic moves to Singtel and Simba is only used if Singtel fails. Takes effect without restarting the tunnel.</p>
+  </div>
+
+  <div class="panel sched" id="jetp" hidden>
+    <div class="bar">
+      <label>Jetson split</label>
+      <span role="group" aria-label="Split" id="jsplit"><button data-w="1.0">All Simba</button><button data-w="0.5" class="on">Balanced</button><button data-w="0.0">All Singtel</button></span>
+      <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Split weight to Simba">
+      <span class="chip" id="jwcur">w=0.50</span>
+      <span class="spacer"></span>
+      <button id="jload" class="primary">Load test 30s</button>
+      <span id="jmsg"></span>
+    </div>
+    <div class="chips" id="jkpis">
+      <span class="chip">Total <b id="ktot">–</b></span>
+      <span class="chip">Efisiensi agregasi <b id="keff">–</b></span>
+      <span class="chip">Σ 2 SIM <b id="ksig">–</b></span>
+    </div>
+    <p class="desc">Atur pembagian beban jalur <b>Jetson multipath</b> ke dua SIM (geser = berapa banyak ke Simba). <b>Load test</b> mendorong trafik bitrate tinggi ~30 dtk supaya dua SIM terisi penuh dan efisiensi agregasi terlihat — ini memakai kuota seluler.</p>
   </div>
 
   </div><!--/colL-->
@@ -532,6 +551,7 @@ function chips(el,list){ el.innerHTML=list.map(([t,c])=>`<span class="chip ${c||
 function readouts(row){
   const a=row[1], b=row[2], tot=a+b;
   $('v1').innerHTML=`${a} <small>kbps</small>`; $('v2').innerHTML=`${b} <small>kbps</small>`; $('v3').innerHTML=`${tot} <small>kbps</small>`;
+  jetKPI(a,b);
   const c1=phys(cur,1), c2=phys(cur,2);
   const tun=row.length>=7, t1=tun?[['OpenVPN tunnel: '+(row[5]?'has subflow':'NO subflow'),row[5]?'ok':'bad']]:[], t2=tun?[['OpenVPN tunnel: '+(row[6]?'has subflow':'NO subflow'),row[6]?'ok':'bad']]:[];
   const rttc=v=>(v==null)?null:(v<0?['RTT: no reply','bad']:['RTT '+v+' ms']);
@@ -607,7 +627,7 @@ async function startLive(){
   liveMsg(mode==='http'?'Connecting via the REDLAB local server…':'Connecting via the Claude app…');
   D=null; $('starttest').hidden=false; playing=true; $('play').hidden=true; $('speeds').hidden=true;
   await poll(); LV.timer=setInterval(poll,2500);
-  schedStart(); vpnStart(); linkStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
+  schedStart(); vpnStart(); linkStart(); jetStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
 }
 function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); }
 $('starttest').onclick=()=>startTest();
@@ -695,7 +715,7 @@ async function schedStart(){
   catch(e){ schedMsg('Scheduler control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
   SC.timer=setInterval(()=>{ if(!SC.busy) fetchSched().catch(()=>{}); },15000);
 }
-function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
+function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); jetStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
 
 /* ---------- transport / VPN switch (compare Glorytun UDP vs Glorytun TCP/MPTCP) ---------- */
 const VPN_INFO={
@@ -813,6 +833,30 @@ async function linkStart(){
   LK.timer=setInterval(()=>{ if(!LK.busy) fetchLink().catch(()=>{}); },10000);
 }
 function linkStop(){ if(LK.timer) clearInterval(LK.timer); LK.timer=null; $('linkp').hidden=true; }
+
+/* ---------- Jetson multipath: split control + load test + aggregation KPI ---------- */
+const JET={w:0.5, sigma:32600, loadUntil:0};
+function jetRenderW(){ const e=$('jwcur'); if(!e) return; e.textContent='w='+JET.w.toFixed(2); $('jslider').value=Math.round(JET.w*100);
+  [...$('jsplit').children].forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.w-JET.w)<0.001)); }
+async function jetSetW(w){ JET.w=Math.max(0,Math.min(1,w)); jetRenderW();
+  try{ await api('POST','api/split?w='+JET.w.toFixed(3)); $('jmsg').textContent=''; }
+  catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); } }
+$('jload').onclick=async()=>{ $('jload').disabled=true;
+  try{ const p=await api('POST','api/loadtest?action=start&secs=30&mbps=30'); JET.loadUntil=Date.now()+(p.secs||30)*1000; $('jmsg').textContent=''; }
+  catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); $('jload').disabled=false; } };
+[...$('jsplit').children].forEach(b=>b.onclick=()=>jetSetW(+b.dataset.w));
+$('jslider').oninput=e=>{ JET.w=+e.target.value/100; jetRenderW(); };
+$('jslider').onchange=e=>jetSetW(+e.target.value/100);
+function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
+  el.textContent=(tot/1000).toFixed(1)+' Mb'; $('keff').textContent=Math.min(100,Math.round(tot/JET.sigma*100))+'%'; $('ksig').textContent=(JET.sigma/1000).toFixed(1)+' Mb';
+  if(JET.loadUntil){ const left=Math.ceil((JET.loadUntil-Date.now())/1000);
+    if(left>0){ $('jload').textContent='Load test… '+left+'s'; $('jload').disabled=true; }
+    else { JET.loadUntil=0; $('jload').textContent='Load test 30s'; $('jload').disabled=false; } } }
+async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; return; }
+  $('jetp').hidden=false;
+  try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); }
+  catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; } }
+function jetStop(){ $('jetp').hidden=true; }
 
 /* ---------- camera video (MediaMTX on the VPS) ---------- */
 const VPS='168.144.105.155';

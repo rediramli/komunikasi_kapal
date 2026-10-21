@@ -49,6 +49,46 @@ def vps(cmd, timeout=30):
                        capture_output=True, text=True, timeout=timeout)
     return r.returncode, r.stdout, r.stderr
 
+# ---------------- Jetson multipath: split control + load test ----------------
+MPTUN_CTL = "/tmp/mptun_w"          # the pinned-path split (0=all Singtel .. 1=all Simba)
+SIGMA_KBPS = 32600                  # measured sum of the two SIM capacities (ceiling)
+LOAD_PORT = 5301                    # Stage-3 load-test proxy port on the VPS
+
+def split_status():
+    rc, out, err = rpi("cat %s 2>/dev/null || echo 0.5" % MPTUN_CTL)
+    try: w = float(out.strip())
+    except Exception: w = 0.5
+    return {"w": w, "sigma_kbps": SIGMA_KBPS}
+
+def split_set(w):
+    w = max(0.0, min(1.0, float(w)))
+    rpi("echo %.3f > %s" % (w, MPTUN_CTL))
+    return {"ok": True, "w": w}
+
+def loadtest(action, secs, mbps):
+    secs = max(5, min(60, int(secs))); mbps = max(0.0, min(40.0, float(mbps)))
+    if action == "stop":
+        rpi('P=mpproxy""_send; pkill -f "$P" 2>/dev/null; true')
+        return {"ok": True, "state": "stopped"}
+    # open the port, start a fresh receiver, wait until it listens, then the sender
+    vps('nft list chain inet omr input 2>/dev/null | grep -q "dport %d" || '
+        'nft insert rule inet omr input tcp dport %d accept comment "loadtest"' % (LOAD_PORT, LOAD_PORT))
+    # free the port by pid (name-based pkill would self-match this very command), then start
+    vps('for p in $(ss -tlnp 2>/dev/null | grep ":%d " | grep -oE "pid=[0-9]+" | cut -d= -f2); do kill -9 $p 2>/dev/null; done; sleep 0.4; '
+        'setsid python3 /tmp/mpproxy_recv.py --port %d --conns 8 >/tmp/recv.json 2>/dev/null </dev/null & echo up' % (LOAD_PORT, LOAD_PORT))
+    listening = False
+    for _ in range(10):
+        time.sleep(0.5)
+        rc, out, err = vps("ss -tln 2>/dev/null | grep -c :%d" % LOAD_PORT)
+        if out.strip() not in ("", "0"):
+            listening = True; break
+    if not listening:
+        raise ValueError("load-test receiver did not start on the VPS")
+    rpi('setsid python3 /tmp/mpproxy_send.py --host 168.144.105.155 --port %d --n1 4 --n2 4 '
+        '--w 0.5 --dur %d --bitrate %g --strict --ctl %s >/tmp/send.out 2>&1 </dev/null & echo started'
+        % (LOAD_PORT, secs, mbps, MPTUN_CTL))
+    return {"ok": True, "state": "running", "secs": secs, "mbps": mbps}
+
 # ---------------- VPN / transport switch (Glorytun UDP vs Glorytun TCP/MPTCP) ----------------
 VPN_DEF = {
   "glorytun_udp": {"label": "Glorytun UDP",        "mptcp": False, "rpi_ip": "10.255.254.2",
@@ -314,6 +354,7 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/sched": return self.run(sched_status)
         if u.path == "/api/link": return self.run(link_status)
         if u.path == "/api/vpn": return self.run(vpn_status)
+        if u.path == "/api/split": return self.run(split_status)
         self.send(404, json.dumps({"error": "not found"}))
     def do_POST(self):
         if not self._auth_ok(): return
@@ -328,6 +369,9 @@ class H(BaseHTTPRequestHandler):
             return self.send(400, json.dumps({"ok": False, "error": "action must be cut or restore"}))
         if u.path == "/api/prio": return self.run(lambda: set_prio(g("mode")))
         if u.path == "/api/vpn": return self.run(lambda: vpn_set(g("name")))
+        if u.path == "/api/split": return self.run(lambda: split_set(g("w", "0.5")))
+        if u.path == "/api/loadtest":
+            return self.run(lambda: loadtest(g("action", "start"), g("secs", "30"), g("mbps", "30")))
         self.send(404, json.dumps({"error": "not found"}))
 
 if __name__ == "__main__":
