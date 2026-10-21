@@ -46,7 +46,9 @@ button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .chip{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .chip.bad{color:var(--stall);border-color:var(--stall)} .chip.ok{color:var(--good);border-color:var(--good)}
 #tl{display:block;width:100%;height:190px;cursor:crosshair;touch-action:none}
-.tlwrap{padding:8px 10px 6px}
+#lat{display:block;width:100%;height:150px}
+.tlwrap,.latwrap{padding:8px 10px 6px}
+.latwrap h2{margin:0 0 4px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);padding:0 4px 4px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .lg-line{width:16px;height:2px;border-radius:2px}
@@ -100,6 +102,54 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 .cmp td.best{color:var(--good);font-weight:600}
 .cmp tr.now td:first-child{font-weight:600}
 .sdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle}
+
+/* ===== Landscape single-screen layout (demo / presentation) ===== */
+.colL,.colM,.colR{display:contents}
+@media (min-width:1024px) and (min-aspect-ratio:1/1){
+  html,body{height:100%;overflow:hidden}
+  #app{max-width:none;width:100vw;height:100vh;min-height:0;padding:10px;gap:10px;
+    grid-template-columns:clamp(320px,27vw,430px) minmax(0,1fr) clamp(275px,21vw,330px);
+    grid-template-rows:auto minmax(0,1fr);
+    grid-template-areas:"hd hd hd" "colL colM colR";overflow:hidden}
+  header{grid-area:hd;margin:0;align-items:center}
+  header .sub{display:none}
+  h1{font-size:19px}
+  .colL,.colM,.colR{display:grid;gap:10px;min-width:0;min-height:0}
+  .colL{grid-area:colL;grid-auto-rows:min-content;align-content:start;overflow:auto}
+  .colM{grid-area:colM;grid-template-rows:auto auto minmax(0,1.25fr) minmax(0,1fr)}
+  .colR{grid-area:colR;grid-template-rows:minmax(0,1fr);align-content:stretch;min-height:0;overflow:auto}
+  /* center: diagram (natural), big stat row, timeline fills the rest */
+  #stage{min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #stage>#diag{width:100%;height:auto;max-height:100%;display:block}
+  .tlwrap,.latwrap{min-height:0;display:flex;flex-direction:column;gap:6px}
+  #tl{flex:1 1 auto;width:100%;height:auto;min-height:110px}
+  #lat{flex:1 1 auto;width:100%;height:auto;min-height:90px}
+  .latwrap h2{flex:none}
+  .legend,.tlctl{flex:none}
+  /* big central live numbers */
+  .readouts{grid-template-columns:repeat(3,1fr);gap:10px}
+  .ro{padding:9px 13px}
+  .ro .v{font-size:32px}
+  .ro .k{font-size:13px}
+  /* right column: events + summary + comparison, scroll within */
+  .colR{display:block}
+  .colR .cols{display:grid;grid-template-columns:1fr;gap:10px}
+  .colR>*{margin-bottom:10px}
+  /* compact controls so the whole left column fits without scrolling */
+  .colL{gap:7px}
+  .panel.video .vbox{aspect-ratio:16/9;max-width:100%;margin:0 auto}
+  .panel.video .bar{padding:5px 9px}
+  .sched .desc{display:none}
+  .bar{padding:6px 9px;gap:5px 8px}
+  .panel.bar{padding:6px 9px}
+  h2{margin-bottom:5px}
+  .ro .chips{gap:4px}
+  .ro .chip{font-size:10px;padding:1px 6px}
+  /* right column tables: smaller, scroll inside */
+  .colR table{font-size:12px}
+  .colR th,.colR td{padding:4px 7px}
+  .colR .note{font-size:11px;margin-top:5px}
+}
 </style>
 
 <div class="wrap" id="app">
@@ -108,6 +158,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="sub">Camera stream from the RPi OMR gateway to the DigitalOcean VPS over two cellular links. When a link drops you can see where the traffic moves and how long the stream stalls. In LIVE mode the MPTCP scheduler can be switched one at a time and compared.</p>
   </header>
 
+  <div class="colL">
   <div class="panel bar">
     <label for="preset">Data</label>
     <select id="preset"></select>
@@ -150,6 +201,17 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="desc" id="scheddesc"></p>
   </div>
 
+  <div class="panel sched" id="vpnp" hidden>
+    <div class="bar">
+      <label for="vpnsel">Transport</label>
+      <select id="vpnsel"></select>
+      <span class="chip" id="vpncur">–</span>
+      <button id="vpnapply" class="primary">Switch</button>
+      <span id="vpnmsg"></span>
+    </div>
+    <p class="desc" id="vpndesc"></p>
+  </div>
+
   <div class="panel sched" id="linkp" hidden>
     <div class="bar">
       <label>Links</label>
@@ -164,6 +226,9 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="desc"><span id="linkmsg"></span> <b>Cut</b> drops all traffic on that link except to its own router (like losing the cellular signal); it restores itself after the chosen time, and only one link can be cut at a time so REDLAB keeps its SSH access. <b>Primary path</b> sets the MPTCP backup flag: “Singtel first” marks Simba as backup, so traffic moves to Singtel and Simba is only used if Singtel fails. Takes effect without restarting the tunnel.</p>
   </div>
 
+  </div><!--/colL-->
+
+  <div class="colM">
   <div class="panel" id="stage">
     <canvas id="diag" width="1160" height="460" aria-label="Flow diagram from RPi to VPS over two links"></canvas>
     <span class="status st-ok" id="status">Normal</span>
@@ -178,6 +243,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   <div class="panel tlwrap">
     <canvas id="tl" width="1160" height="190" aria-label="Upload per link over time; click to jump"></canvas>
     <div class="legend">
+      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (bonding)</span>
       <span><i class="lg-line" style="background:var(--simba)"></i>Simba kbps</span>
       <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel kbps</span>
       <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i>stall (total &lt; 500 kbps)</span>
@@ -192,6 +258,20 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     </div>
   </div>
 
+  <div class="panel latwrap">
+    <h2>Latency · RTT to VPS per SIM</h2>
+    <canvas id="lat" width="1160" height="150" aria-label="Round-trip latency per SIM over time"></canvas>
+    <div class="legend">
+      <span><i class="lg-line" style="background:var(--simba)"></i>Simba RTT</span>
+      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel RTT</span>
+      <span><i class="lg-line" style="background:var(--ink)"></i>Tunnel RTT</span>
+      <span class="note">ms · lower is better · gap = packet lost</span>
+    </div>
+  </div>
+
+  </div><!--/colM-->
+
+  <div class="colR">
   <div class="cols">
     <div class="panel"><h2>Events</h2><ol class="ev" id="events"></ol><p class="note" id="pnote"></p></div>
     <div class="panel"><h2>Summary per event</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"></tbody></table></div>
@@ -203,6 +283,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <div class="tbl"><table><thead><tr><th>Scheduler</th><th>Start (UTC)</th><th>Duration</th><th>Avg total</th><th>Simba / Singtel</th><th>Stall seconds</th><th>Longest stall</th><th>Tunnel 2 subflows</th><th>Link cuts</th></tr></thead><tbody id="cmpb"></tbody></table></div>
     <p class="note">One row = one scheduler period since it was applied. The <b>first 25 seconds</b> after a switch (OpenVPN tunnel restart) are not counted. Green = best in its column. The table is kept in this browser, so it survives a page reload. Compare rows with the same conditions (“Link cuts” column).</p>
   </div>
+  </div><!--/colR-->
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
@@ -373,7 +454,7 @@ function drawDiagram(row, dtReal){
 const tv=$('tl'), tx=tv.getContext('2d'); let TL={};
 function tlLayout(){ const w=tv.clientWidth,h=190,dpr=devicePixelRatio||1; tv.width=w*dpr; tv.height=h*dpr; tx.setTransform(dpr,0,0,dpr,0,0); TL={w,h,l:44,r:10,t:10,b:24}; }
 function drawTL(){
-  const {w,h,l,r,t,b}=TL, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2), ymax=Math.max(4000,...rows.map(x=>Math.max(x[1],x[2])))*1.05;
+  const {w,h,l,r,t,b}=TL, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2), ymax=Math.max(4000,...rows.map(x=>x[1]+x[2]))*1.05;
   const X=s=>l+(w-l-r)*(Math.min(T,Math.max(t0,s))-t0)/(T-t0), Y=v=>t+(h-t-b)*(1-v/ymax);
   tx.clearRect(0,0,w,h);
   // cut spans
@@ -391,8 +472,9 @@ function drawTL(){
   for(let s=Math.ceil(t0/tstep)*tstep;s<=T;s+=tstep) tx.fillText(D.live?hms(D.start+s):fmt(s),X(s),h-b+6);
   // auto-cut spans from live rows
   if(D.live){ for(const k of [7,8]){ tx.fillStyle=css('--grid'); rows.forEach((x,i)=>{ if(x[k]===1&&i){ tx.fillRect(X(rows[i-1][0]),t,Math.max(1,X(x[0])-X(rows[i-1][0])),h-t-b); } }); } }
-  // lines
-  [[1,css('--simba')],[2,css('--singtel')]].forEach(([i,col])=>{ tx.strokeStyle=col; tx.lineWidth=1.6; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[i]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke(); });
+  // lines: per-link, then total (bonding) on top
+  [[1,css('--simba')],[2,css('--singtel')]].forEach(([i,col])=>{ tx.strokeStyle=col; tx.lineWidth=1.4; tx.globalAlpha=.9; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[i]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke(); });
+  tx.globalAlpha=1; tx.strokeStyle=css('--ink'); tx.lineWidth=2.2; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[1]+x[2]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke();
   // events
   tx.setLineDash([3,3]); tx.strokeStyle=css('--muted'); D.events.forEach(e=>{ if(e.t<t0||e.t>T) return; tx.beginPath(); tx.moveTo(X(e.t),t); tx.lineTo(X(e.t),h-b); tx.stroke(); }); tx.setLineDash([]);
   // scheduler changes (live)
@@ -405,6 +487,26 @@ function drawTL(){
   // playhead
   if(cur>=t0&&cur<=T){ tx.strokeStyle=css('--ink'); tx.lineWidth=2; tx.beginPath(); tx.moveTo(X(cur),t); tx.lineTo(X(cur),h-b); tx.stroke(); }
   TL.X=X; TL.T=T; TL.t0=t0; syncSlider(t0,T);
+}
+/* ---------- latency (RTT to VPS per SIM) ---------- */
+const lv=$('lat'), lc=lv.getContext('2d'); let LAT={};
+function latLayout(){ const w=lv.clientWidth,h=150,dpr=devicePixelRatio||1; lv.width=w*dpr; lv.height=h*dpr; lc.setTransform(dpr,0,0,dpr,0,0); LAT={w,h,l:44,r:10,t:10,b:22}; }
+function drawLat(){
+  if(!D||!D.rows.length||!LAT.w) return;
+  const {w,h,l,r,t,b}=LAT, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2);
+  const has=rows.some(x=>x.length>9 && [9,10,11].some(i=>x[i]>=0));
+  lc.clearRect(0,0,w,h);
+  const vals=[]; rows.forEach(x=>{ for(const i of [9,10,11]){ const v=x[i]; if(v!=null&&v>=0) vals.push(v); } });
+  const ymax=Math.max(50,...vals)*1.15;
+  const X=s=>l+(w-l-r)*(Math.min(T,Math.max(t0,s))-t0)/(T-t0), Y=v=>t+(h-t-b)*(1-Math.min(v,ymax)/ymax);
+  lc.strokeStyle=css('--grid'); lc.lineWidth=1; lc.fillStyle=css('--muted'); lc.font=`11px ${css('--mono')}`; lc.textAlign='right'; lc.textBaseline='middle';
+  const step= ymax>400?100: ymax>150?50:25;
+  for(let v=0;v<=ymax;v+=step){ lc.beginPath(); lc.moveTo(l,Y(v)); lc.lineTo(w-r,Y(v)); lc.stroke(); lc.fillText(v,l-6,Y(v)); }
+  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('waiting for latency samples…',w/2,h/2); return; }
+  [[9,css('--simba'),1.5],[10,css('--singtel'),1.5],[11,css('--ink'),2]].forEach(([i,col,lw])=>{
+    lc.strokeStyle=col; lc.lineWidth=lw; lc.beginPath(); let pen=false;
+    rows.forEach(x=>{ const v=x[i]; if(v==null||v<0){ pen=false; return; } const px=X(x[0]),py=Y(v); pen?lc.lineTo(px,py):lc.moveTo(px,py); pen=true; }); lc.stroke(); });
+  if(cur>=t0&&cur<=T){ lc.strokeStyle=css('--ink'); lc.globalAlpha=.35; lc.lineWidth=1.5; lc.beginPath(); lc.moveTo(X(cur),t); lc.lineTo(X(cur),h-b); lc.stroke(); lc.globalAlpha=1; }
 }
 /* view window for LIVE: span seconds, follow the newest sample or a fixed end */
 const VIEW={span:300, follow:true, end:0};
@@ -432,11 +534,13 @@ function readouts(row){
   $('v1').innerHTML=`${a} <small>kbps</small>`; $('v2').innerHTML=`${b} <small>kbps</small>`; $('v3').innerHTML=`${tot} <small>kbps</small>`;
   const c1=phys(cur,1), c2=phys(cur,2);
   const tun=row.length>=7, t1=tun?[['OpenVPN tunnel: '+(row[5]?'has subflow':'NO subflow'),row[5]?'ok':'bad']]:[], t2=tun?[['OpenVPN tunnel: '+(row[6]?'has subflow':'NO subflow'),row[6]?'ok':'bad']]:[];
-  chips($('c1'),[[c1?'cable/signal cut':'connected',c1?'bad':'ok'],['status OMR: '+(row[3]?'up':'down'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'% of traffic'],...t1]);
-  chips($('c2'),[[c2?'cable/signal cut':'connected',c2?'bad':'ok'],['status OMR: '+(row[4]?'up':'down'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'% of traffic'],...t2]);
+  const rttc=v=>(v==null)?null:(v<0?['RTT: no reply','bad']:['RTT '+v+' ms']);
+  const q1=rttc(row[9]), q2=rttc(row[10]), qt=rttc(row[11]);
+  chips($('c1'),[[c1?'cable/signal cut':'connected',c1?'bad':'ok'],['status OMR: '+(row[3]?'up':'down'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'% of traffic'],...(q1?[q1]:[]),...t1]);
+  chips($('c2'),[[c2?'cable/signal cut':'connected',c2?'bad':'ok'],['status OMR: '+(row[4]?'up':'down'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'% of traffic'],...(q2?[q2]:[]),...t2]);
   const stalled=tot<STALL;
   const sc = D.live && SC.log.length ? schedAt(D.start+row[0]).name : null;
-  chips($('c3'),[[stalled?'STALLED':'flowing',stalled?'bad':'ok'],['camera rate ≈ '+D.base+' kbps'],...(sc?[['scheduler: '+sc]]:[])]);
+  chips($('c3'),[[stalled?'STALLED':'flowing',stalled?'bad':'ok'],['camera rate ≈ '+D.base+' kbps'],...(qt?[qt]:[]),...(sc?[['scheduler: '+sc]]:[])]);
   const st=$('status');
   if(stalled){ st.textContent='Stalled · stream stopped'; st.className='status st-stall'; }
   else if(c1||c2){ st.textContent='Failover · 1 link'; st.className='status st-fo'; }
@@ -503,7 +607,7 @@ async function startLive(){
   liveMsg(mode==='http'?'Connecting via the REDLAB local server…':'Connecting via the Claude app…');
   D=null; $('starttest').hidden=false; playing=true; $('play').hidden=true; $('speeds').hidden=true;
   await poll(); LV.timer=setInterval(poll,2500);
-  schedStart(); linkStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
+  schedStart(); vpnStart(); linkStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
 }
 function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); }
 $('starttest').onclick=()=>startTest();
@@ -591,7 +695,45 @@ async function schedStart(){
   catch(e){ schedMsg('Scheduler control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
   SC.timer=setInterval(()=>{ if(!SC.busy) fetchSched().catch(()=>{}); },15000);
 }
-function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
+function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
+
+/* ---------- transport / VPN switch (compare Glorytun UDP vs Glorytun TCP/MPTCP) ---------- */
+const VPN_INFO={
+  glorytun_udp:'<b>Glorytun UDP</b> — aggregates both SIMs over UDP (not kernel MPTCP). Most stable, both links share the load roughly evenly, normal latency. The MPTCP scheduler above has <b>no effect</b> here.',
+  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — the tunnel is one TCP connection bonded by kernel MPTCP across both SIMs (look for 2 subflows). The <b>scheduler above now affects the camera</b>. With very different link RTTs a single light stream leans to the low-RTT SIM and latency is higher (head-of-line blocking).'
+};
+const VP={cur:null,avail:[],busy:false,timer:null};
+function vpnDesc(){ $('vpndesc').innerHTML=VPN_INFO[$('vpnsel').value]||('<b>'+$('vpnsel').value+'</b>'); }
+function vpnMsg(t){ $('vpnmsg').textContent=t; }
+function vpnButtons(){ const dis=VP.busy||LV.testRunning; ['vpnsel','vpnapply'].forEach(id=>$(id).disabled=dis); if(!VP.busy&&$('vpnsel').value===VP.cur)$('vpnapply').disabled=true; }
+async function fetchVpn(){
+  const r=await fetch('api/vpn',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
+  VP.cur=p.current; VP.avail=p.available||[]; const sel=$('vpnsel');
+  if(sel.options.length!==VP.avail.length){ sel.innerHTML=VP.avail.map(n=>`<option value="${n}">${(p.labels&&p.labels[n])||n}</option>`).join(''); sel.value=VP.cur; }
+  if(!VP.busy) sel.value=VP.cur;
+  $('vpncur').textContent=((p.labels&&p.labels[VP.cur])||VP.cur)+(p.mptcp?' · MPTCP':'')+' · '+(p.status||'?');
+  $('vpncur').className='chip '+(p.status==='up'?'ok':'');
+  vpnDesc(); vpnButtons(); return p;
+}
+async function vpnApply(name){
+  if(name===VP.cur) return;
+  VP.busy=true; vpnButtons(); vpnMsg('Switching to '+name+'… restarts the tunnel (~30–60 s), camera pauses briefly.');
+  try{
+    const r=await fetch('api/vpn?name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
+    if(!r.ok||p.ok===false) throw new Error(p.error||('HTTP '+r.status));
+    VP.cur=p.current; vpnMsg('Now on '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Camera returns in a few seconds.');
+  }catch(e){ vpnMsg('Switch failed: '+String(e.message||e).slice(0,160)); }
+  VP.busy=false; await fetchVpn().catch(()=>{}); vpnButtons();
+}
+async function vpnStart(){
+  if(LV.mode!=='http'){ $('vpnp').hidden=true; return; }
+  $('vpnp').hidden=false; vpnMsg('Reading transport…');
+  try{ await fetchVpn(); vpnMsg(''); }catch(e){ vpnMsg('Transport control unavailable: '+String(e.message||e).slice(0,140)+'. Update live_server.py.'); }
+  VP.timer=setInterval(()=>{ if(!VP.busy) fetchVpn().catch(()=>{}); },15000);
+}
+function vpnStop(){ if(VP.timer) clearInterval(VP.timer); VP.timer=null; $('vpnp').hidden=true; }
+$('vpnsel').onchange=()=>{ vpnDesc(); vpnButtons(); };
+$('vpnapply').onclick=()=>vpnApply($('vpnsel').value);
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function waitTunnel(since, maxS){ // tunggu sampel live terbaru menunjukkan 2 subflow tunnel
   const t0=Date.now();
@@ -694,7 +836,7 @@ $('vtoggle').onclick=()=>{ VID.on=!VID.on; vsave(); vload(); };
 vload();
 
 /* ---------- loop ---------- */
-function draw(force){ if(!D||!D.rows.length) return; const row=rowAt(cur); if(!row) return; drawTL(); readouts(row); if(force) drawDiagram(row,0); }
+function draw(force){ if(!D||!D.rows.length) return; const row=rowAt(cur); if(!row) return; drawTL(); drawLat(); readouts(row); if(force) drawDiagram(row,0); }
 function frame(ts){
   const dt=lastTs? Math.min(.1,(ts-lastTs)/1000):0; lastTs=ts;
   if(D&&D.rows.length){
@@ -703,11 +845,11 @@ function frame(ts){
     else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Play'; } }
     const row=rowAt(cur), simDt=cur-lastSimT; lastSimT=cur;
     if(simDt>0 && simDt<5) queue=Math.max(0, queue + (D.base-(row[1]+row[2]))*simDt); else if(simDt<0||simDt>=5) queue=0;
-    drawDiagram(row,dt); drawTL(); readouts(row);
+    drawDiagram(row,dt); drawTL(); drawLat(); readouts(row);
   }
   requestAnimationFrame(frame);
 }
-function resize(){ layout(); tlLayout(); if(D) draw(true); }
+function resize(){ layout(); tlLayout(); latLayout(); if(D) draw(true); }
 addEventListener('resize',resize);
 try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
 resize();

@@ -20,6 +20,10 @@ SAMPLER = r'''#!/bin/sh
 # omr-live.sh - sampler 1 Hz untuk Digital Twin (dipasang otomatis oleh omr-twin)
 F=/tmp/omr_live.csv; echo $$ > /tmp/omr_live.pid
 txb() { cat /sys/class/net/$1/statistics/tx_bytes 2>/dev/null || echo 0; }
+VPS=${VPS:-168.144.105.155}
+# RTT (ms, rounded) to the VPS via one WAN; -1 when unreachable within 1s.
+prif() { ping -c1 -W1 -I "$1" "$VPS" 2>/dev/null | sed -n 's/.*time=\([0-9.]*\).*/\1/p' | awk 'NR==1{printf "%d",($1+0.5);f=1} END{if(!f)print -1}'; }
+prdef() { ping -c1 -W1 "$VPS" 2>/dev/null | sed -n 's/.*time=\([0-9.]*\).*/\1/p' | awk 'NR==1{printf "%d",($1+0.5);f=1} END{if(!f)print -1}'; }
 IP1=$(uci -q get network.wan1.ipaddr); IP2=$(uci -q get network.wan2.ipaddr)
 a=$(txb wan1); b=$(txb wan2); n=0
 while :; do
@@ -31,7 +35,8 @@ while :; do
   o1=$(echo "$ov" | grep -c "$IP1[%:]"); o2=$(echo "$ov" | grep -c "$IP2[%:]")
   t=$(nft list table inet fotest 2>/dev/null); k1=0; k2=0
   echo "$t" | grep -q pre_wan1 && k1=1; echo "$t" | grep -q pre_wan2 && k2=1
-  echo "$(date +%s),$x,$y,$([ "$s1" = up ] && echo 1 || echo 0),$([ "$s2" = up ] && echo 1 || echo 0),$o1,$o2,$k1,$k2" >> $F
+  r1=$(prif wan1); r2=$(prif wan2); rt=$(prdef)
+  echo "$(date +%s),$x,$y,$([ "$s1" = up ] && echo 1 || echo 0),$([ "$s2" = up ] && echo 1 || echo 0),$o1,$o2,$k1,$k2,$r1,$r2,$rt" >> $F
   n=$((n+1))
   if [ $n -ge 300 ]; then tail -900 $F > $F.tmp && mv $F.tmp $F; n=0; fi
   # runs continuously (no idle self-stop) so the dashboard never freezes; a single guarded
@@ -84,7 +89,8 @@ def omr_live(args):
             if parts and parts[0].isdigit(): test["marks"].append({"epoch": int(parts[0]), "what": parts[-1]})
     if test["dir"]: res["test"] = test
     res["columns"] = ["epoch", "simba_kbps", "singtel_kbps", "simba_up", "singtel_up",
-                      "openvpn_sf_simba", "openvpn_sf_singtel", "simba_cut_auto", "singtel_cut_auto"]
+                      "openvpn_sf_simba", "openvpn_sf_singtel", "simba_cut_auto", "singtel_cut_auto",
+                      "rtt_simba_ms", "rtt_singtel_ms", "rtt_tunnel_ms"]
     return res
 
 def omr_start_test(args):

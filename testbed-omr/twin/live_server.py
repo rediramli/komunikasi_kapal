@@ -19,9 +19,11 @@ Endpoints
 Options: --port 8799  --host 127.0.0.1  --rpi root@100.102.109.59
 Keep --host on 127.0.0.1: the control endpoints change the RPi.
 """
-import json, os, re, sys, time, argparse, subprocess, threading
+import json, os, re, sys, time, argparse, subprocess, threading, base64
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
+
+AUTH = os.environ.get("TWIN_AUTH", "")   # set to "user:password" to require HTTP Basic auth (for public hosting)
 HERE = os.path.dirname(os.path.abspath(__file__))
 import types
 _src = open(os.path.join(HERE, "omr_twin_mcp.py"), encoding="utf-8").read().split("\nfor raw in sys.stdin:")[0]
@@ -39,6 +41,69 @@ def rpi(cmd, timeout=30):
     r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", RPI, cmd],
                        capture_output=True, text=True, timeout=timeout)
     return r.returncode, r.stdout, r.stderr
+
+VPS = "root@168.144.105.155"
+VPS_PORT = "65222"
+def vps(cmd, timeout=30):
+    r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "-p", VPS_PORT, VPS, cmd],
+                       capture_output=True, text=True, timeout=timeout)
+    return r.returncode, r.stdout, r.stderr
+
+# ---------------- VPN / transport switch (Glorytun UDP vs Glorytun TCP/MPTCP) ----------------
+VPN_DEF = {
+  "glorytun_udp": {"label": "Glorytun UDP",        "mptcp": False, "rpi_ip": "10.255.254.2",
+                   "vps_route": "ip route replace 192.168.100.0/24 via 10.255.254.2 dev gt-udp-tun0"},
+  "glorytun_tcp": {"label": "Glorytun TCP (MPTCP)", "mptcp": True,  "rpi_ip": "10.255.255.2",
+                   "vps_route": "ip route replace 192.168.100.0/24 via 10.255.255.2 dev gt-tun0"},
+}
+def vpn_status():
+    rc, out, err = rpi("uci -q get openmptcprouter.settings.vpn; uci -q get openmptcprouter.omr.vpn; "
+                       "ss -tniM 2>/dev/null | grep -c subflows_total:2", 15)
+    if rc != 0 and not out:
+        raise RuntimeError((err or "ssh to RPi failed").strip()[:200])
+    p = (out.splitlines() + ["", "", ""])
+    return {"current": p[0].strip(), "status": p[1].strip(),
+            "available": list(VPN_DEF), "labels": {k: v["label"] for k, v in VPN_DEF.items()},
+            "mptcp": VPN_DEF.get(p[0].strip(), {}).get("mptcp", False)}
+
+def vpn_set(name):
+    if name not in VPN_DEF:
+        raise ValueError("unknown vpn: %r" % name)
+    # Each glorytun variant puts its peer IP on a tun device, but OMR also runs OpenVPN on
+    # tun0 (10.255.252.x). OpenVPN can re-grab tun0 and make glorytun fail with "couldn't
+    # create tun device", leaving the interface + IP present but the DAEMON dead (tunnel up
+    # on paper, no data plane -> camera stops). So stop OpenVPN, delete the stale device,
+    # then verify the daemon is actually alive (pidof, self-match-proof) with a few retries
+    # -- not just that tun0 exists, which previously gave a false "done".
+    if name == "glorytun_tcp":
+        on, off, svc_on, svc_off = "glorytun", "glorytun-udp", "glorytun", "glorytun-udp"
+        proc, dev, waitip = "glorytun-tcp", "tun0", "10.255.255.2"
+        free = "/etc/init.d/openvpn stop >/dev/null 2>&1; ip link del gt-tun0 2>/dev/null; ip link del tun0 2>/dev/null"
+        ipcmd = "ip addr add 10.255.255.2/32 peer 10.255.255.1 dev tun0 2>/dev/null; ip link set tun0 up"
+    else:
+        on, off, svc_on, svc_off = "glorytun-udp", "glorytun", "glorytun-udp", "glorytun"
+        proc, dev, waitip = "glorytun-udp", "tun0", "10.255.254.2"
+        free = "/etc/init.d/openvpn stop >/dev/null 2>&1; ip link del tun0 2>/dev/null"
+        ipcmd = "ip addr add 10.255.254.2/32 peer 10.255.254.1 dev tun0 2>/dev/null; ip link set tun0 up"
+    rcmd = ("uci set openmptcprouter.settings.vpn=%(name)s; "
+            "uci set %(on)s.vpn.enable=1; uci set %(off)s.vpn.enable=0; uci commit; "
+            "/etc/init.d/%(svcoff)s stop >/dev/null 2>&1; "
+            "n=0; while :; do %(free)s; sleep 1; /etc/init.d/%(svcon)s restart >/dev/null 2>&1; "
+            "ok=0; for i in $(seq 1 12); do pidof %(proc)s >/dev/null 2>&1 && { ok=1; break; }; sleep 1; done; "
+            "[ \"$ok\" = 1 ] && break; n=$((n+1)); [ $n -ge 3 ] && break; done; "
+            "for i in $(seq 1 15); do ip link show %(dev)s >/dev/null 2>&1 && break; sleep 1; done; sleep 1; %(ipcmd)s; "
+            "for i in $(seq 1 15); do ip addr show %(dev)s 2>/dev/null | grep -q %(waitip)s && break; sleep 1; done; "
+            "if pidof %(proc)s >/dev/null 2>&1 && ip addr show %(dev)s 2>/dev/null | grep -q %(waitip)s; then echo done; else echo FAIL; fi"
+            % {"name": name, "on": on, "off": off, "svcoff": svc_off, "svcon": svc_on,
+               "free": free, "proc": proc, "dev": dev, "ipcmd": ipcmd, "waitip": waitip})
+    rc, out, err = rpi(rcmd, 180)
+    if "done" not in out:
+        raise RuntimeError((err or out).strip()[:200] or "vpn switch failed: glorytun daemon not alive on RPi")
+    vps(VPN_DEF[name]["vps_route"], 30)
+    time.sleep(2)
+    st = vpn_status()
+    st["ok"] = (st["current"] == name)
+    return st
 
 # ---------------- sampler ----------------
 _last_kick = [0]
@@ -80,7 +145,13 @@ def sched_set(name, restart=True):
     cmd = ("sysctl -w net.mptcp.scheduler=%s >/dev/null && echo \"$(date +%%s) %s\" >> %s && "
            "logger -t omr-twin \"scheduler -> %s\"" % (name, name, SCHED_LOG, name))
     if restart:
-        cmd += " && /etc/init.d/openvpn restart >/dev/null 2>&1; echo done"
+        # restart whichever VPN actually carries the camera so the new scheduler takes effect
+        cmd += (" && V=$(uci -q get openmptcprouter.settings.vpn);"
+                " case \"$V\" in"
+                " glorytun_tcp) /etc/init.d/glorytun restart >/dev/null 2>&1; sh /root/gt-tcp-ip.sh >/dev/null 2>&1 ;;"
+                " glorytun_udp) /etc/init.d/glorytun-udp restart >/dev/null 2>&1 ;;"
+                " *) /etc/init.d/openvpn restart >/dev/null 2>&1 ;;"
+                " esac; echo done")
     rc, out, err = rpi(cmd, 60)
     if "done" not in out and rc != 0:
         raise RuntimeError((err or out).strip()[:200] or "failed")
@@ -212,11 +283,23 @@ class H(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass   # browser closed the request (reload/navigate) - harmless
     def log_message(self, *a): pass
+    def _auth_ok(self):
+        if not AUTH: return True
+        h = self.headers.get("Authorization", "")
+        if h.startswith("Basic "):
+            try:
+                if base64.b64decode(h[6:]).decode("utf-8", "ignore") == AUTH: return True
+            except Exception: pass
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="Digital Twin MPTCP"')
+        self.send_header("Content-Length", "0"); self.end_headers()
+        return False
     def run(self, fn):
         try: return self.send(200, json.dumps(fn()))
         except ValueError as e: return self.send(400, json.dumps({"ok": False, "error": str(e)}))
         except Exception as e: return self.send(502, json.dumps({"ok": False, "error": str(e)}))
     def do_GET(self):
+        if not self._auth_ok(): return
         u = urlparse(self.path); q = parse_qs(u.query)
         if u.path in ("/", "/index.html"):
             html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
@@ -230,8 +313,10 @@ class H(BaseHTTPRequestHandler):
             return self.run(live)
         if u.path == "/api/sched": return self.run(sched_status)
         if u.path == "/api/link": return self.run(link_status)
+        if u.path == "/api/vpn": return self.run(vpn_status)
         self.send(404, json.dumps({"error": "not found"}))
     def do_POST(self):
+        if not self._auth_ok(): return
         u = urlparse(self.path); q = parse_qs(u.query); g = lambda k, d="": q.get(k, [d])[0]
         if u.path == "/api/start-test":
             return self.run(lambda: omr.omr_start_test({"duration": int(g("duration", "420"))}))
@@ -242,6 +327,7 @@ class H(BaseHTTPRequestHandler):
             if g("action") == "restore": return self.run(lambda: link_restore(g("dev")))
             return self.send(400, json.dumps({"ok": False, "error": "action must be cut or restore"}))
         if u.path == "/api/prio": return self.run(lambda: set_prio(g("mode")))
+        if u.path == "/api/vpn": return self.run(lambda: vpn_set(g("name")))
         self.send(404, json.dumps({"error": "not found"}))
 
 if __name__ == "__main__":
