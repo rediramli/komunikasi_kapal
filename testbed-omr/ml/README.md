@@ -51,6 +51,7 @@ split them, as the two SIMs drift and degrade* — is what the agent learns.
 | `mpproxy_send.py` | **Stage 3** sender (RPi): one stream over pinned sub-streams |
 | `mpproxy_recv.py` | **Stage 3** receiver (VPS): in-order reassembly + metrics |
 | `run_stage3.py` | **Stage 3** orchestrator: deploy, sweep split `w`, measure |
+| `controller.py` | **Stage 3b** closed loop: live state → policy → drive the proxy |
 
 ## Run
 
@@ -142,6 +143,40 @@ python3 run_stage3.py --strict --weights 1.0 0.75 0.5 0.25 0.0 --dur 5   # sweep
 python3 run_stage3.py --strict --weights 1.0 0.5 --bitrate 20 --dur 4    # fixed rate
 ```
 
+## Stage 3b — closed loop (policy drives the proxy)
+
+`controller.py` ties it together: train the policy, read the **live per-SIM RTT**
+from the sampler, let the policy choose the split, and run the real proxy with it.
+It ran end-to-end on hardware (observe → decide → act → measure).
+
+Two honest findings from wiring it up:
+
+1. **Model correction.** The real Stage 3 sweep showed a balanced split *maximises*
+   goodput (w=0.5 → 32.5), with higher reorder buffering as the cost. The first
+   model wrongly docked *goodput* at balance; it now charges the reassembly cost to
+   *latency* instead, matching the data (model goodput now peaks ~31 at w=0.5).
+2. **Where the policy adapts.** After the fix, the learned policy behaves sensibly:
+   use both SIMs when healthy; when Singtel's RTT spikes or it weakens, shift to
+   Simba with fewer sub-streams.
+
+| live/synthetic state | policy → |
+|---|---|
+| healthy 16/17, 12/90 ms | use both SIMs (N=16) |
+| Singtel RTT → 250 ms | N=2, w=0.75 (lean to Simba) |
+| Singtel cap → 4 Mb | N=2, w=1.0 (Simba only) |
+| RTTs symmetric 30/45 | balanced N=4, w=0.5 |
+
+Caveat worth stating to anyone reading this: in *healthy* regimes the split is a
+broad optimum, so the learned policy is often only reward-equivalent to a good
+fixed config — its clear value is **adaptation under degradation**. The honest
+headline stays: the pinned actuator is what recovers the aggregate (14 → ~32);
+the learned controller then protects latency and adapts when a SIM turns bad.
+
+```bash
+python3 controller.py            # decision table (offline, no data)
+python3 controller.py --run      # observe live, run the proxy with the chosen split
+```
+
 ## Honest caveats
 
 - `link_model.py` is a **model calibrated to our measurements**, not the real
@@ -163,7 +198,11 @@ python3 run_stage3.py --strict --weights 1.0 0.5 --bitrate 20 --dur 4    # fixed
    (`mpproxy_send/recv`, `run_stage3`) runs on the real link and reassembles one
    stream over pinned sub-streams. A single stream aggregates to ~the full sum
    (32.5 Mb), 2.3x glorytun; the cost is reorder/latency, tuned by the split `w`.
-   Remaining: drive `w` live from the Stage 1 policy, map the goodput/latency
-   Pareto front at fixed bitrates, and feed MediaMTX the reassembled stream.
+   Remaining: map the goodput/latency Pareto front at fixed bitrates, and feed
+   MediaMTX the reassembled stream.
+3b. **Stage 3b — done (core)**: closed loop (`controller.py`) — live RTT → policy
+   → proxy split, run on hardware; model corrected to match the real data.
+   Remaining: live capacity estimation (sampler gives RTT, not capacity) and
+   dynamic mid-stream `w` changes over a control channel.
 4. **Stage 4**: deploy inference on the Jetson Orin Nano, reading the live
    sampler and driving the proxy's split live; optional move from bandit to DQN.

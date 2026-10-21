@@ -51,6 +51,10 @@ _OVERSHOOT = 0.010   # extra loss per sub-stream above the knee
 _REORDER_ALPHA = 0.52   # strength of the in-order reassembly penalty
 _REORDER_RTT = 100.0    # ms; RTT skew is measured relative to this
 _REORDER_NSCALE = 4.0   # more sub-streams shrink the penalty (buffer effect)
+_REORDER_MS = 420.0  # max reassembly delay added to LATENCY (not goodput). Stage 3
+                     # real data: a balanced split MAXIMISES goodput (w=0.5 -> 32.5)
+                     # while raising reorder buffering -> the penalty is latency, not
+                     # throughput. (Earlier the model wrongly docked goodput at balance.)
 _QUEUE_MS = 55.0     # added latency at full path utilisation (queueing)
 _OVERHEAD_PER_SUB = 0.22  # Mbit/s of goodput lost per sub-stream (ACKs, headers,
                           # CPU, retransmits). Makes "more streams" not free, so
@@ -113,15 +117,14 @@ def evaluate(state: LinkState, n: int, w1: float, lam: float = 0.0):
 
     f1, f2 = raw1 / raw, raw2 / raw
     skew = abs(state.rtt1 - state.rtt2) / _REORDER_RTT
-    # reassembly penalty: worst at an even split (4*f1*f2 -> 1) and high skew;
-    # shrinks as sub-stream count (buffer) grows.
-    reorder = 1.0 - _REORDER_ALPHA * (4.0 * f1 * f2) * skew / (1.0 + n / _REORDER_NSCALE)
-    reorder = min(1.0, max(0.35, reorder))
-    goodput = max(0.0, raw * reorder - (n1 + n2) * _OVERHEAD_PER_SUB)
-
+    # goodput peaks at a balanced split (both SIMs used); overhead per sub-stream.
+    goodput = max(0.0, raw - (n1 + n2) * _OVERHEAD_PER_SUB)
+    # the reassembly cost is LATENCY: worst at an even split (4*f1*f2 -> 1) across a
+    # big RTT skew; a larger reorder buffer (more sub-streams) softens it.
+    reorder_ms = _REORDER_MS * (4.0 * f1 * f2) * skew / (1.0 + n / _REORDER_NSCALE)
     lat1 = state.rtt1 + _QUEUE_MS * _fill(n1)
     lat2 = state.rtt2 + _QUEUE_MS * _fill(n2)
-    latency = (raw1 * lat1 + raw2 * lat2) / raw
+    latency = (raw1 * lat1 + raw2 * lat2) / raw + reorder_ms
     reward = goodput - lam * latency
     return reward, {"goodput": goodput, "latency": latency,
                     "n1": n1, "n2": n2, "raw1": raw1, "raw2": raw2}
