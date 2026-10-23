@@ -47,14 +47,24 @@ def server_stop():
 
 
 def observe() -> dict:
-    """Per-SIM live state from the 1 Hz sampler CSV on the RPi (last row)."""
+    """Per-SIM live state from the 1 Hz sampler CSV on the RPi (last row).
+
+    CSV fields: epoch,simba_kbps,singtel_kbps,wan1_up,wan2_up,ovpn1,ovpn2,
+    cut1,cut2,rtt_simba,rtt_singtel,rtt_tunnel.  rtt = -1 means no ping reply
+    (link down/cut); wanN_up=0 and cutN=1 also flag a dead SIM.
+    """
     row = _ssh(RPI, "tail -1 /tmp/omr_live.csv").strip()
     f = row.split(",")
     if len(f) < 12:
         return {}
-    return {"simba_kbps": int(f[1]), "singtel_kbps": int(f[2]),
-            "rtt_simba_ms": int(f[9]), "rtt_singtel_ms": int(f[10]),
-            "rtt_tunnel_ms": int(f[11])}
+    def num(i):
+        try: return int(f[i])
+        except Exception: return 0
+    return {"simba_kbps": num(1), "singtel_kbps": num(2),
+            "wan1_up": num(3), "wan2_up": num(4),
+            "cut1": num(7), "cut2": num(8),
+            "rtt_simba_ms": num(9), "rtt_singtel_ms": num(10),
+            "rtt_tunnel_ms": num(11)}
 
 
 def probe(n_substreams: int, dur: int = 6) -> float:

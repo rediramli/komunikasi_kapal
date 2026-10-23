@@ -87,11 +87,21 @@ def push_decision(d, path=DECISION_FILE):
         pass
 
 
+def _sim(cap, rtt, up, cut, rtt_ok):
+    """Map one SIM's live readings to (cap, rtt, loss). A dead SIM (no ping reply
+    rtt<0, state down, or manually cut) is reported as degraded so the policy
+    shifts decisively to the healthy SIM instead of toward the dead one."""
+    dead = (rtt is None) or (rtt < 0) or (up == 0) or (cut == 1)
+    if dead:
+        return 1.0, 300.0, 0.6          # tiny capacity, high RTT+loss -> avoid
+    return cap, float(max(1, rtt)), 0.0
+
+
 def observe(cap1, cap2):
-    o = reallink.observe()
-    rtt1 = o.get("rtt_simba_ms", 12) if o else 12
-    rtt2 = o.get("rtt_singtel_ms", 90) if o else 90
-    return "live", LinkState(cap1, cap2, float(max(1, rtt1)), float(max(1, rtt2)), 0, 0)
+    o = reallink.observe() or {}
+    c1, r1, l1 = _sim(cap1, o.get("rtt_simba_ms"), o.get("wan1_up", 1), o.get("cut1", 0), 12)
+    c2, r2, l2 = _sim(cap2, o.get("rtt_singtel_ms"), o.get("wan2_up", 1), o.get("cut2", 0), 90)
+    return "live", LinkState(c1, c2, r1, r2, l1, l2)
 
 
 def main():

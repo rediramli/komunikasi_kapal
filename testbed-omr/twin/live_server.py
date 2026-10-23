@@ -211,10 +211,6 @@ def sched_set(name, restart=True):
     return st
 
 # ---------------- link cut / priority ----------------
-RESTORE_SH = ('cat > /tmp/twincut_restore.sh <<\'EOS\'\n'
-              'sleep "$3"; [ "$(cat /tmp/$1.id 2>/dev/null)" = "$2" ] && nft delete table inet $1 2>/dev/null\n'
-              'logger -t omr-twin "auto-restore $1"; exit 0\nEOS\n')
-
 def link_status():
     rc, out, err = rpi("date +%s; echo ---; nft list tables 2>/dev/null | grep -o 'twincut_wan[12]'; "
                        "echo ---; ip mptcp endpoint show", 20)
@@ -253,28 +249,40 @@ def link_cut(dev, secs):
     if st["cut"][dev]:
         return st
     t, net = "twincut_" + dev, LINKS[dev]["net"]
-    cmd = (RESTORE_SH +
-           "nft -f - <<'EON'\n"
-           "table inet %(t)s {\n"
-           " chain o { type filter hook output priority -5; policy accept; oifname \"%(d)s\" ip daddr != %(n)s drop; }\n"
-           " chain i { type filter hook input priority -5; policy accept; iifname \"%(d)s\" ip saddr != %(n)s drop; }\n"
-           " chain f { type filter hook forward priority -5; policy accept; oifname \"%(d)s\" ip daddr != %(n)s drop; "
-           "iifname \"%(d)s\" ip saddr != %(n)s drop; }\n"
-           "}\nEON\n"
-           "id=$(date +%%s); echo $id > /tmp/%(t)s.id; logger -t omr-twin \"cut %(d)s for %(s)ss\"\n"
-           "S=; command -v setsid >/dev/null && S=setsid; ( $S sh /tmp/twincut_restore.sh %(t)s $id %(s)s </dev/null >/dev/null 2>&1 & )\n"
-           "echo cut-ok $id\n") % {"t": t, "d": dev, "n": net, "s": secs}
-    rc, out, err = rpi(cmd, 30)
-    m = re.search(r"cut-ok (\d+)", out)
-    if not m:
-        raise RuntimeError((err or out).strip()[:200] or "cut failed")
-    ep = int(m.group(1))
+    # Self-contained cut+auto-restore script. Run DETACHED on the RPi so that when
+    # the cut drops the link that currently carries the control SSH, the command
+    # interrupting itself cannot leave the cut stuck (the detached process still
+    # sleeps and restores). We write the script first (no cut yet -> SSH-safe),
+    # then launch it detached and return optimistically.
+    script = (
+        "id=$(date +%%s); echo \"$id\" > /tmp/%(t)s.id\n"
+        "nft -f - <<'EON'\n"
+        "table inet %(t)s {\n"
+        " chain o { type filter hook output priority -5; policy accept; oifname \"%(d)s\" ip daddr != %(n)s drop; }\n"
+        " chain i { type filter hook input priority -5; policy accept; iifname \"%(d)s\" ip saddr != %(n)s drop; }\n"
+        " chain f { type filter hook forward priority -5; policy accept; oifname \"%(d)s\" ip daddr != %(n)s drop; "
+        "iifname \"%(d)s\" ip saddr != %(n)s drop; }\n"
+        "}\nEON\n"
+        "logger -t omr-twin \"cut %(d)s for %(s)ss\"\n"
+        "sleep %(s)s\n"
+        "[ \"$(cat /tmp/%(t)s.id 2>/dev/null)\" = \"$id\" ] && { nft delete table inet %(t)s 2>/dev/null; "
+        "rm -f /tmp/%(t)s.id; logger -t omr-twin \"auto-restore %(d)s\"; }\n"
+    ) % {"t": t, "d": dev, "n": net, "s": secs}
+    b64 = base64.b64encode(script.encode()).decode()
+    ep = int(time.time())
+    rpi("echo %s | base64 -d > /tmp/%s_do.sh && setsid sh /tmp/%s_do.sh </dev/null >/tmp/%s.log 2>&1 & echo launched"
+        % (b64, t, t, t), 20)
     with LOCK:
         if not (CUTS[dev] and CUTS[dev][-1][1] is None):
             CUTS[dev].append([ep, None, ep + secs]); MANUAL.append({"ep": ep, "dev": dev, "kind": "down", "how": "manual"})
         else:
             CUTS[dev][-1][2] = ep + secs
-    return link_status()
+    time.sleep(0.5)
+    try:
+        return link_status()
+    except Exception:
+        return {"now": ep, "cut": {dev: True, ("wan2" if dev == "wan1" else "wan1"): False},
+                "prio": {}, "mode": "auto", "endpoints": {}}
 
 def link_restore(dev):
     if dev not in LINKS: raise ValueError("unknown link")
