@@ -187,6 +187,19 @@ body[data-tab="kpi"] .v-mon{display:none!important}
 .vcell .vbox{aspect-ratio:16/9;max-width:100%}
 .vmsg.hint{inset:auto 0 0 0;align-items:flex-end;justify-content:flex-start;text-align:left;padding:5px 10px 6px;font-size:11px;line-height:1.35;color:#e9eef4;background:linear-gradient(transparent,rgba(0,0,0,.8))}
 
+/* ===== AI split-decision trace (Jetson contribution, made visible) ===== */
+:root{--accent:#6d4ad6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--accent:#9a7af0}}
+:root[data-theme="dark"]{--accent:#9a7af0}
+.jchips{margin-left:auto;display:flex;gap:6px;align-items:center}
+.jchips .chip{margin-left:0}
+.aistat{border-color:var(--line);color:var(--muted)}
+.aistat.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--line));font-weight:600}
+.jspark{margin-top:2px}
+.jspark .cap{font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:2px}
+.jspark .cap b{color:var(--accent);font-weight:600}
+#jwspark{width:100%;height:46px;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+
 /* ===== KPI reference card (vs commercial) ===== */
 .refcard{padding:12px 14px}
 .refcard h2{margin-bottom:8px}
@@ -305,7 +318,7 @@ body[data-tab="kpi"] .v-mon{display:none!important}
   </div>
 
   <div class="panel jet v-kpi" id="jetp" hidden>
-    <div class="jhead"><h2>Agregasi bonding · otak Jetson</h2><span class="chip" id="jwcur">w=0.50</span></div>
+    <div class="jhead"><h2>Agregasi bonding · otak Jetson</h2><span class="jchips"><span class="chip aistat" id="jai">AI –</span><span class="chip" id="jwcur">w=0.50</span></span></div>
     <div class="jstat">
       <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Total throughput</div></div>
       <div class="jk eff"><div class="jkv" id="keff">–</div><div class="jkl">Efisiensi agregasi</div></div>
@@ -313,6 +326,10 @@ body[data-tab="kpi"] .v-mon{display:none!important}
     </div>
     <div class="splitbar" aria-hidden="true"><span id="sbar1" style="width:50%"></span><span id="sbar2" style="width:50%"></span></div>
     <div class="splitlab"><span class="s1" id="slab1">Simba 50%</span><span class="s2" id="slab2">Singtel 50%</span></div>
+    <div class="jspark">
+      <div class="cap"><span><b>Keputusan split AI</b> (w) · live</span><span>atas = Simba · bawah = Singtel</span></div>
+      <canvas id="jwspark" height="46" aria-label="Riwayat keputusan split w dari controller AI Jetson"></canvas>
+    </div>
     <div class="jrow">
       <span role="group" aria-label="Split" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Seimbang</button><button data-w="0.0">Singtel</button></span>
       <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Pembagian beban ke Simba">
@@ -922,12 +939,31 @@ async function linkStart(){
 function linkStop(){ if(LK.timer) clearInterval(LK.timer); LK.timer=null; $('linkp').hidden=true; }
 
 /* ---------- Jetson multipath: split control + load test + aggregation KPI ---------- */
-const JET={w:0.5, sigma:32600, loadUntil:0};
+const JET={w:0.5, sigma:32600, loadUntil:0, whist:[], aiOn:false, userAt:0, ptimer:null};
 function jetRenderW(){ const e=$('jwcur'); if(!e) return; e.textContent='w='+JET.w.toFixed(2); $('jslider').value=Math.round(JET.w*100);
   [...$('jsplit').children].forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.w-JET.w)<0.001)); }
-async function jetSetW(w){ JET.w=Math.max(0,Math.min(1,w)); jetRenderW();
+async function jetSetW(w){ JET.w=Math.max(0,Math.min(1,w)); JET.userAt=Date.now(); jetRenderW();
   try{ await api('POST','api/split?w='+JET.w.toFixed(3)); $('jmsg').textContent=''; }
   catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); } }
+function drawSpark(){ const c=$('jwspark'); if(!c||!c.clientWidth) return;
+  const dpr=devicePixelRatio||1, w=c.clientWidth, h=46; c.width=w*dpr; c.height=h*dpr;
+  const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h);
+  const pad=5, H=h-2*pad, Y=v=>pad+(1-v)*H, acc=css('--accent')||'#6d4ad6';
+  x.strokeStyle=css('--line'); x.lineWidth=1; x.setLineDash([3,3]); x.beginPath(); x.moveTo(0,Y(0.5)); x.lineTo(w,Y(0.5)); x.stroke(); x.setLineDash([]);
+  const hist=JET.whist; if(hist.length<2){ if(hist.length){ x.fillStyle=acc; x.beginPath(); x.arc(w-6,Y(hist[0][1]),2.5,0,7); x.fill(); } return; }
+  const t0=hist[0][0], span=Math.max(1,hist[hist.length-1][0]-t0), PX=t=>(t-t0)/span*(w-6)+3;
+  x.strokeStyle=acc; x.lineWidth=2; x.lineJoin='round'; x.beginPath();
+  hist.forEach(([t,v],i)=>{ const X=PX(t),yy=Y(v); i?x.lineTo(X,yy):x.moveTo(X,yy); }); x.stroke();
+  const L=hist[hist.length-1]; x.fillStyle=acc; x.beginPath(); x.arc(PX(L[0]),Y(L[1]),2.8,0,7); x.fill(); }
+async function jetPoll(){
+  try{ const p=await api('GET','api/split'); const w=p.w; if(typeof w!=='number') return;
+    const now=Date.now(); JET.whist.push([now,w]); if(JET.whist.length>160) JET.whist.shift();
+    const r=JET.whist.slice(-6).map(s=>s[1]); const moved=r.length>=3 && (Math.max(...r)-Math.min(...r))>0.02;
+    JET.aiOn = moved && (now-JET.userAt>15000);
+    JET.w=w; jetRenderW(); drawSpark();
+    const ai=$('jai'); if(ai){ ai.textContent=JET.aiOn?'● AI aktif · menggerakkan split':'split statik'; ai.className='chip aistat'+(JET.aiOn?' on':''); }
+  }catch(e){}
+}
 $('jload').onclick=async()=>{ $('jload').disabled=true;
   try{ const p=await api('POST','api/loadtest?action=start&secs=30&mbps=30'); JET.loadUntil=Date.now()+(p.secs||30)*1000; $('jmsg').textContent=''; }
   catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); $('jload').disabled=false; } };
@@ -947,9 +983,10 @@ function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
     else { JET.loadUntil=0; $('jload').textContent='Uji beban 30 dtk'; $('jload').disabled=false; } } }
 async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; return; }
   $('jetp').hidden=false;
-  try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); }
-  catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; } }
-function jetStop(){ $('jetp').hidden=true; }
+  try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); jetPoll(); }
+  catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; }
+  if(!JET.ptimer) JET.ptimer=setInterval(jetPoll, 3000); }
+function jetStop(){ if(JET.ptimer){ clearInterval(JET.ptimer); JET.ptimer=null; } $('jetp').hidden=true; }
 
 /* ---------- dual camera video (MediaMTX on the VPS) ---------- */
 const VPS='168.144.105.155';
@@ -1004,7 +1041,7 @@ function frame(ts){
   }
   requestAnimationFrame(frame);
 }
-function resize(){ layout(); tlLayout(); latLayout(); if(D) draw(true); }
+function resize(){ layout(); tlLayout(); latLayout(); drawSpark(); if(D) draw(true); }
 addEventListener('resize',resize);
 try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
 resize();
