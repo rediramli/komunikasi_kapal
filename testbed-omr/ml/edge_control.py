@@ -16,7 +16,8 @@ Usage (on the Jetson):
   python3 edge_control.py --cycles 6 --period 3
   python3 edge_control.py --demo --cycles 8 --period 2
 """
-import argparse, subprocess, time
+import argparse, subprocess, time, json
+import numpy as np
 from bond_env import ACTIONS, features
 from link_model import LinkState
 from controller import train_policy, decide
@@ -24,6 +25,7 @@ import reallink
 
 RPI = "root@100.102.109.59"
 CTL_FILE = "/tmp/mpproxy_w"
+DECISION_FILE = "/tmp/jet_decision.json"   # the dashboard reads this to show how the AI decides
 
 DEMO = [
     ("healthy",        LinkState(16, 17, 12, 90, 0, 0)),
@@ -38,6 +40,51 @@ DEMO = [
 def push_w(w, ctl=CTL_FILE):
     subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", RPI,
                     f"echo {w:.3f} > {ctl}"], timeout=15)
+
+
+def decision_snapshot(agent, st, n, w):
+    """Expose HOW the LinUCB policy decided: observed state, the learned score of each
+    split weight (exploit mean, max over N), and the chosen (N, w). Scores are
+    normalised 0..1 only for display."""
+    x = features(st)
+    scores = [float((agent._Ainv[a] @ agent.b[a]) @ x) for a in range(agent.n)]
+    byw = {}
+    for a, (N, ww) in enumerate(ACTIONS):
+        byw[ww] = max(byw.get(ww, -1e18), scores[a])
+    ws = sorted(byw)
+    vals = [byw[v] for v in ws]
+    lo, hi = min(vals), max(vals)
+    cand = [{"w": ws[i], "score": round((vals[i] - lo) / (hi - lo), 3) if hi > lo else 0.5,
+             "chosen": abs(ws[i] - w) < 1e-6} for i in range(len(ws))]
+    # reason is derived from the chosen w so it always matches the decision; the model
+    # weighs goodput (capacity) against latency (RTT) per SIM.
+    if w >= 0.6:
+        lean = "lebih banyak beban ke Simba"
+    elif w <= 0.4:
+        lean = "lebih banyak beban ke Singtel"
+    else:
+        lean = "pembagian mendekati seimbang"
+    driver = []
+    if st.loss1 > 0.05 or st.loss2 > 0.05:
+        driver.append("menghindari SIM yang rugi paket")
+    if abs(st.cap1 - st.cap2) > 3:
+        driver.append("mengikuti kapasitas yang lebih besar")
+    if abs(st.rtt1 - st.rtt2) > 40:
+        driver.append("menimbang selisih RTT")
+    reason = lean + (" — " + ", ".join(driver) if driver else "")
+    return {"ts": time.time(),
+            "state": {"cap1": round(st.cap1, 1), "cap2": round(st.cap2, 1),
+                      "rtt1": round(st.rtt1), "rtt2": round(st.rtt2),
+                      "loss1": st.loss1, "loss2": st.loss2},
+            "cand": cand, "chosen": {"N": n, "w": w}, "reason": reason}
+
+
+def push_decision(d, path=DECISION_FILE):
+    try:
+        subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", RPI,
+                        f"cat > {path}"], input=json.dumps(d).encode(), timeout=15)
+    except Exception:
+        pass
 
 
 def observe(cap1, cap2):
@@ -67,6 +114,7 @@ def main():
             label, st = observe(a.cap1, a.cap2)
         n, w = decide(agent, st)
         push_w(w, a.ctl)
+        push_decision(decision_snapshot(agent, st, n, w))
         print(f"{i:>6}{label:>16}{st.rtt1:7.0f}/{st.rtt2:4.0f}{('N=%d w=%.2f' % (n, w)):>14}")
         time.sleep(a.period)
     print("done.")

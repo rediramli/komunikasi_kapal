@@ -170,13 +170,6 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   .colR .note{font-size:11px;margin-top:5px}
 }
 
-/* ===== Tabs (Monitor / Riset KPI) ===== */
-.tabs{display:flex;gap:4px;margin-left:auto}
-.tabs button{border-radius:999px;padding:6px 15px;font-weight:600;font-size:13px}
-.tabs button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-body[data-tab="monitor"] .v-kpi{display:none!important}
-body[data-tab="kpi"] .v-mon{display:none!important}
-
 /* ===== Dual camera ===== */
 .vgrid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--grid);border-radius:0 0 10px 10px;overflow:hidden}
 .vcell{background:#000;display:flex;flex-direction:column;min-width:0}
@@ -200,6 +193,28 @@ body[data-tab="kpi"] .v-mon{display:none!important}
 .jspark .cap b{color:var(--accent);font-weight:600}
 #jwspark{width:100%;height:46px;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 
+/* ===== "How the AI decides" panel ===== */
+.aiwork{padding:13px 15px;display:flex;flex-direction:column;gap:12px}
+.aiwork .jhead .chip{margin-left:auto}
+.aistep{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start}
+.aistep .num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.aistep .st{font-weight:600;font-size:12.5px;margin-bottom:5px}
+.aiobs{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0}
+.aiobs .s1{color:var(--simba);font-weight:600} .aiobs .s2{color:var(--singtel);font-weight:600}
+.aiobs .v{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.cand{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.candrow{display:grid;grid-template-columns:50px 1fr 46px;gap:8px;align-items:center;font-size:11.5px}
+.candrow .wl{font-family:var(--mono);color:var(--muted)}
+.candrow .cb{height:15px;border-radius:5px;background:var(--track);overflow:hidden;position:relative}
+.candrow .cb>span{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--accent) 32%,var(--track));border-radius:5px;transition:width .4s ease}
+.candrow .pk{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700;text-align:right}
+.candrow.pick .wl{color:var(--accent);font-weight:700}
+.candrow.pick .cb>span{background:var(--accent)}
+.aidecide{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.aidecide .wbig{font-family:var(--sans);font-weight:800;font-size:23px;color:var(--accent);line-height:1}
+.aidecide .nsub{font-size:12px;color:var(--muted)}
+.aiwhy{font-size:12.5px;color:var(--muted);margin-top:4px;font-style:italic;line-height:1.4}
+
 /* ===== KPI reference card (vs commercial) ===== */
 .refcard{padding:12px 14px}
 .refcard h2{margin-bottom:8px}
@@ -211,22 +226,13 @@ body[data-tab="kpi"] .v-mon{display:none!important}
 .refitem.ours{border-color:color-mix(in srgb,var(--good) 50%,var(--line));background:color-mix(in srgb,var(--good) 7%,var(--surface))}
 .refitem.ours .nm .b{color:var(--good);border-color:var(--good)}
 
-/* ===== Per-tab landscape layout ===== */
-@media (min-width:1024px) and (min-aspect-ratio:1/1){
-  body[data-tab="monitor"] .colM{grid-template-rows:minmax(0,1fr) auto}
-  body[data-tab="kpi"] .colM{grid-template-rows:minmax(0,1.25fr) minmax(0,1fr)}
-  .vcell .vbox{max-width:100%;margin:0}
-}
+@media (min-width:1024px) and (min-aspect-ratio:1/1){ .vcell .vbox{max-width:100%;margin:0} }
 </style>
 
 <div class="wrap" id="app">
   <header>
     <h1>Digital Twin MPTCP</h1>
-    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS lewat dua link seluler, dibonding di edge Jetson. Tab <b>Monitor</b> untuk pantau live; tab <b>Riset KPI</b> untuk grafik performa, agregasi, dan perbandingan.</p>
-    <nav class="tabs" id="tabs" role="tablist" aria-label="Tampilan">
-      <button class="on" data-tab="monitor" role="tab">Monitor</button>
-      <button data-tab="kpi" role="tab">Riset KPI</button>
-    </nav>
+    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS lewat dua link seluler, dibonding di edge <b>Jetson (AI/ML)</b>: controller LinUCB mengamati tiap SIM dan membagi beban secara live.</p>
   </header>
 
   <div class="colL">
@@ -338,16 +344,6 @@ body[data-tab="kpi"] .v-mon{display:none!important}
     <p class="desc"><span id="jmsg"></span>Geser untuk mengatur pembagian beban kamera ke dua SIM, atau biarkan Jetson yang memutuskan. <b>Uji beban</b> mendorong trafik bitrate tinggi ~30 dtk agar dua SIM terisi penuh dan agregasi terlihat (memakai kuota seluler).</p>
   </div>
 
-  <div class="panel refcard v-kpi" id="refp">
-    <h2>Posisi vs solusi komersial (Jason)</h2>
-    <div class="refrow">
-      <div class="refitem ours"><div class="nm">Jetson AI bonding — kita <span class="b">ML adaptif</span></div><div class="d">Sub-stream pinned per-SIM + controller LinUCB di edge. Agregasi penuh satu video (≈38 Mb/s), tetap jalan saat MPTCP tumbang, split adaptif dari tren tiap SIM.</div></div>
-      <div class="refitem"><div class="nm">Kognitive MPK-VPN <span class="b">heuristik</span></div><div class="d">Bonding + PEP berbasis aturan reaktif. Tak ada penjadwalan belajar / antisipatif.</div></div>
-      <div class="refitem"><div class="nm">Bondix S.A.NE <span class="b">heuristik</span></div><div class="d">Micro-retransmit + duplikasi paket; split by ukur-saat-ini. Tangguh tapi tak adaptif-belajar.</div></div>
-    </div>
-    <p class="note">Riset: banding goodput &amp; outage di kondisi volatil (fade/dropout maritim). Target pembeda: ↓ outage ~11% relatif vs heuristik reaktif.</p>
-  </div>
-
   </div><!--/colL-->
 
   <div class="colM">
@@ -394,6 +390,25 @@ body[data-tab="kpi"] .v-mon{display:none!important}
   </div><!--/colM-->
 
   <div class="colR">
+  <div class="panel aiwork" id="aiwork" hidden>
+    <div class="jhead"><h2>Cara kerja otak AI · LinUCB</h2><span class="chip" id="aists">–</span></div>
+    <div class="aistep"><div class="num">1</div><div>
+      <div class="st">Amati kondisi tiap SIM (live)</div>
+      <div class="aiobs"><span class="s1">Simba</span><span class="v" id="ai_s1">RTT – · cap –</span></div>
+      <div class="aiobs"><span class="s2">Singtel</span><span class="v" id="ai_s2">RTT – · cap –</span></div>
+    </div></div>
+    <div class="aistep"><div class="num">2</div><div>
+      <div class="st">Nilai tiap pilihan split (skor yang dipelajari)</div>
+      <div class="cand" id="ai_cand"></div>
+    </div></div>
+    <div class="aistep"><div class="num">3</div><div>
+      <div class="st">Putuskan &amp; terapkan</div>
+      <div class="aidecide"><span class="wbig" id="ai_w">w=–</span><span class="nsub" id="ai_n"></span></div>
+      <div class="aiwhy" id="ai_why"></div>
+    </div></div>
+    <p class="note">Model LinUCB: tiap detik ia menilai 25 aksi (jumlah sub-stream × split) dari kondisi SIM, lalu memilih skor tertinggi — pembagian beban jadi adaptif, bukan tetap.</p>
+  </div>
+
   <div class="cols v-mon">
     <div class="panel"><h2>Events</h2><ol class="ev" id="events"></ol><p class="note" id="pnote"></p></div>
     <div class="panel"><h2>Summary per event</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"></tbody></table></div>
@@ -981,12 +996,26 @@ function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
   if(JET.loadUntil){ const left=Math.ceil((JET.loadUntil-Date.now())/1000);
     if(left>0){ $('jload').textContent='Uji beban… '+left+'s'; $('jload').disabled=true; }
     else { JET.loadUntil=0; $('jload').textContent='Uji beban 30 dtk'; $('jload').disabled=false; } } }
-async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; return; }
-  $('jetp').hidden=false;
-  try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); jetPoll(); }
+function aiRender(d){ if(!d||!d.state) return; const s=d.state;
+  $('ai_s1').textContent='RTT '+s.rtt1+' ms · cap ~'+s.cap1+' Mb';
+  $('ai_s2').textContent='RTT '+s.rtt2+' ms · cap ~'+s.cap2+' Mb';
+  const cand=d.cand||[];
+  $('ai_cand').innerHTML=cand.map(c=>{ const pct=Math.round((c.score||0)*100);
+    return `<div class="candrow ${c.chosen?'pick':''}"><span class="wl">w=${(+c.w).toFixed(2)}</span><div class="cb"><span style="width:${pct}%"></span></div><span class="pk">${c.chosen?'✓ pilih':''}</span></div>`;
+  }).join('');
+  const ch=d.chosen||{};
+  $('ai_w').textContent='w='+(ch.w!=null?(+ch.w).toFixed(2):'–');
+  $('ai_n').textContent=(ch.N!=null?('· N='+ch.N+' sub-stream'):'');
+  $('ai_why').textContent=d.reason||'';
+  const st=$('aists'), age=d.ts?Math.round(Date.now()/1000-d.ts):999;
+  if(age<12){ st.textContent='● live'; st.className='chip ok'; } else { st.textContent='menunggu Jetson'; st.className='chip'; } }
+async function aiPoll(){ try{ aiRender(await api('GET','api/jet')); }catch(e){} }
+async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; $('aiwork').hidden=true; return; }
+  $('jetp').hidden=false; $('aiwork').hidden=false;
+  try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); jetPoll(); aiPoll(); }
   catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; }
-  if(!JET.ptimer) JET.ptimer=setInterval(jetPoll, 3000); }
-function jetStop(){ if(JET.ptimer){ clearInterval(JET.ptimer); JET.ptimer=null; } $('jetp').hidden=true; }
+  if(!JET.ptimer) JET.ptimer=setInterval(()=>{ jetPoll(); aiPoll(); }, 3000); }
+function jetStop(){ if(JET.ptimer){ clearInterval(JET.ptimer); JET.ptimer=null; } $('jetp').hidden=true; $('aiwork').hidden=true; }
 
 /* ---------- dual camera video (MediaMTX on the VPS) ---------- */
 const VPS='168.144.105.155';
@@ -1020,13 +1049,6 @@ $('vreload').onclick=()=>{ ['vframeA','vframeB'].forEach(id=>$(id).removeAttribu
 $('vtoggle').onclick=()=>{ VID.on=!VID.on; vsave(); vload(); };
 vload();
 
-/* ---------- tab switching (Monitor / Riset KPI) ---------- */
-function setTab(t){ document.body.dataset.tab=t;
-  [...$('tabs').children].forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
-  try{ localStorage.setItem('twin.tab',t); }catch(e){}
-  requestAnimationFrame(()=>{ resize(); if(D) draw(true); }); }
-[...$('tabs').children].forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-
 /* ---------- loop ---------- */
 function draw(force){ if(!D||!D.rows.length) return; const row=rowAt(cur); if(!row) return; drawTL(); drawLat(); readouts(row); if(force) drawDiagram(row,0); }
 function frame(ts){
@@ -1045,7 +1067,6 @@ function resize(){ layout(); tlLayout(); latLayout(); drawSpark(); if(D) draw(tr
 addEventListener('resize',resize);
 try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
 resize();
-setTab((()=>{ try{ return localStorage.getItem('twin.tab')||'monitor'; }catch(e){ return 'monitor'; } })());
 $('preset').value='live'; startLive();
 requestAnimationFrame(frame);
 </script>

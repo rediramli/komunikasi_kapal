@@ -65,6 +65,15 @@ def split_set(w):
     rpi("echo %.3f > %s" % (w, MPTUN_CTL))
     return {"ok": True, "w": w}
 
+JET_DECISION = "/tmp/jet_decision.json"   # edge_control.py on the Jetson writes its live decision here (via the RPi)
+def jet_status():
+    """The Jetson AI's latest decision snapshot: observed state, per-split scores, chosen (N,w)."""
+    rc, out, err = rpi("cat %s 2>/dev/null || echo '{}'" % JET_DECISION)
+    try: d = json.loads((out or "").strip() or "{}")
+    except Exception: d = {}
+    d["sigma_kbps"] = SIGMA_KBPS
+    return d
+
 def loadtest(action, secs, mbps):
     secs = max(5, min(60, int(secs))); mbps = max(0.0, min(40.0, float(mbps)))
     if action == "stop":
@@ -355,6 +364,7 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/link": return self.run(link_status)
         if u.path == "/api/vpn": return self.run(vpn_status)
         if u.path == "/api/split": return self.run(split_status)
+        if u.path == "/api/jet": return self.run(jet_status)
         self.send(404, json.dumps({"error": "not found"}))
     def do_POST(self):
         if not self._auth_ok(): return
