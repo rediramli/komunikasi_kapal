@@ -23,7 +23,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
 h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
 .sub{color:var(--muted);margin:0;max-width:70ch}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(16,23,32,.04),0 2px 6px rgba(16,23,32,.03)}
 .bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px}
 .bar label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 select,button,.filebtn{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
@@ -102,6 +102,25 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 .cmp td.best{color:var(--good);font-weight:600}
 .cmp tr.now td:first-child{font-weight:600}
 .sdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle}
+/* Jetson aggregation panel — the headline feature, made prominent */
+.jet{padding:12px 14px;display:grid;gap:11px}
+.jhead{display:flex;align-items:center;gap:8px}
+.jhead h2{margin:0}
+.jhead .chip{margin-left:auto;font-family:var(--mono);color:var(--ink);border-color:var(--line)}
+.jstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.jk{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 8px;text-align:center;min-width:0}
+.jkv{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:600;line-height:1.1;color:var(--ink)}
+.jk.tot .jkv{color:var(--ink)} .jk.eff .jkv{color:var(--good)}
+.jkl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;line-height:1.25}
+.splitbar{display:flex;height:9px;border-radius:999px;overflow:hidden;background:var(--grid)}
+.splitbar span{display:block;height:100%;transition:width .4s ease}
+#sbar1{background:var(--simba)} #sbar2{background:var(--singtel)}
+.splitlab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-4px}
+.splitlab .s1{color:var(--simba)} .splitlab .s2{color:var(--singtel)}
+.jrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.jrow input[type=range]{flex:1;min-width:110px;accent-color:var(--ink)}
+.jet .desc{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.jet .desc b{color:var(--ink);font-weight:600}
 
 /* ===== Landscape single-screen layout (demo / presentation) ===== */
 .colL,.colM,.colR{display:contents}
@@ -150,12 +169,51 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   .colR th,.colR td{padding:4px 7px}
   .colR .note{font-size:11px;margin-top:5px}
 }
+
+/* ===== Tabs (Monitor / Riset KPI) ===== */
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs button{border-radius:999px;padding:6px 15px;font-weight:600;font-size:13px}
+.tabs button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+body[data-tab="monitor"] .v-kpi{display:none!important}
+body[data-tab="kpi"] .v-mon{display:none!important}
+
+/* ===== Dual camera ===== */
+.vgrid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--grid);border-radius:0 0 10px 10px;overflow:hidden}
+.vcell{background:#000;display:flex;flex-direction:column;min-width:0}
+.vlab{display:flex;align-items:center;gap:8px;padding:5px 9px;background:var(--surface)}
+.vlab select{flex:1;min-width:0}
+.vlab .tag{font-size:10px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--simba);padding:2px 7px;border-radius:999px;flex:none}
+.vcell:nth-child(2) .vlab .tag{background:var(--singtel)}
+.vcell .vbox{aspect-ratio:16/9;max-width:100%}
+.vmsg.hint{inset:auto 0 0 0;align-items:flex-end;justify-content:flex-start;text-align:left;padding:5px 10px 6px;font-size:11px;line-height:1.35;color:#e9eef4;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+
+/* ===== KPI reference card (vs commercial) ===== */
+.refcard{padding:12px 14px}
+.refcard h2{margin-bottom:8px}
+.refrow{display:grid;grid-template-columns:1fr;gap:8px}
+.refitem{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg)}
+.refitem .nm{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.refitem .nm .b{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.refitem .d{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.refitem.ours{border-color:color-mix(in srgb,var(--good) 50%,var(--line));background:color-mix(in srgb,var(--good) 7%,var(--surface))}
+.refitem.ours .nm .b{color:var(--good);border-color:var(--good)}
+
+/* ===== Per-tab landscape layout ===== */
+@media (min-width:1024px) and (min-aspect-ratio:1/1){
+  body[data-tab="monitor"] .colM{grid-template-rows:minmax(0,1fr) auto}
+  body[data-tab="kpi"] .colM{grid-template-rows:minmax(0,1.25fr) minmax(0,1fr)}
+  .vcell .vbox{max-width:100%;margin:0}
+}
 </style>
 
 <div class="wrap" id="app">
   <header>
     <h1>Digital Twin MPTCP</h1>
-    <p class="sub">Camera stream from the RPi OMR gateway to the DigitalOcean VPS over two cellular links. When a link drops you can see where the traffic moves and how long the stream stalls. In LIVE mode the MPTCP scheduler can be switched one at a time and compared.</p>
+    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS lewat dua link seluler, dibonding di edge Jetson. Tab <b>Monitor</b> untuk pantau live; tab <b>Riset KPI</b> untuk grafik performa, agregasi, dan perbandingan.</p>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Tampilan">
+      <button class="on" data-tab="monitor" role="tab">Monitor</button>
+      <button data-tab="kpi" role="tab">Riset KPI</button>
+    </nav>
   </header>
 
   <div class="colL">
@@ -171,25 +229,44 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <span class="clock" id="clock">--:--:--</span>
   </div>
 
-  <div class="panel video" id="videop">
+  <div class="panel video v-mon" id="videop">
     <div class="bar">
-      <label for="vpath">Camera</label>
-      <select id="vpath">
-        <option value="live/cam">live/cam · C270 via laptop (RTMP)</option>
-        <option value="dlink">dlink · D-Link main stream</option>
-        <option value="dlink_sub">dlink_sub · D-Link sub-stream</option>
-        <option value="dlink_mp">dlink_mp · D-Link via Jetson multipath</option>
-      </select>
+      <label>Kamera</label>
       <span role="group" aria-label="Player" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
-      <button id="vreload">Reload</button>
-      <button id="vtoggle">Hide video</button>
-      <a id="vopen" target="_blank" rel="noopener">Open in new tab ↗</a>
-      <span id="vnote"></span>
+      <button id="vreload">Muat ulang</button>
+      <button id="vtoggle">Sembunyikan</button>
+      <span class="spacer"></span>
+      <span id="vnote" class="note" style="margin:0"></span>
     </div>
-    <div class="vwrap" id="vbox"><div class="vbox"><iframe id="vframe" title="Camera stream from the VPS" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsg" hidden></div></div></div>
+    <div class="vgrid" id="vgrid">
+      <div class="vcell">
+        <div class="vlab"><span class="tag">CAM 1</span>
+          <select id="vpathA" aria-label="Sumber kamera 1">
+            <option value="dlink">dlink · D-Link main</option>
+            <option value="dlink_sub">dlink_sub · D-Link sub</option>
+            <option value="dlink_mp">dlink_mp · D-Link via Jetson</option>
+            <option value="hik">hik · Hikvision 4MP main</option>
+            <option value="hik_sub">hik_sub · Hikvision sub</option>
+            <option value="live/cam">live/cam · C270 (RTMP)</option>
+          </select></div>
+        <div class="vbox"><iframe id="vframeA" title="Kamera 1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgA" hidden></div></div>
+      </div>
+      <div class="vcell">
+        <div class="vlab"><span class="tag">CAM 2</span>
+          <select id="vpathB" aria-label="Sumber kamera 2">
+            <option value="dlink">dlink · D-Link main</option>
+            <option value="dlink_sub">dlink_sub · D-Link sub</option>
+            <option value="dlink_mp">dlink_mp · D-Link via Jetson</option>
+            <option value="hik">hik · Hikvision 4MP main</option>
+            <option value="hik_sub">hik_sub · Hikvision sub</option>
+            <option value="live/cam">live/cam · C270 (RTMP)</option>
+          </select></div>
+        <div class="vbox"><iframe id="vframeB" title="Kamera 2" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgB" hidden></div></div>
+      </div>
+    </div>
   </div>
 
-  <div class="panel sched" id="schedp" hidden>
+  <div class="panel sched v-kpi" id="schedp" hidden>
     <div class="bar">
       <label for="schedsel">Scheduler</label>
       <select id="schedsel"></select>
@@ -202,7 +279,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="desc" id="scheddesc"></p>
   </div>
 
-  <div class="panel sched" id="vpnp" hidden>
+  <div class="panel sched v-mon" id="vpnp" hidden>
     <div class="bar">
       <label for="vpnsel">Transport</label>
       <select id="vpnsel"></select>
@@ -213,7 +290,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="desc" id="vpndesc"></p>
   </div>
 
-  <div class="panel sched" id="linkp" hidden>
+  <div class="panel sched v-mon" id="linkp" hidden>
     <div class="bar">
       <label>Links</label>
       <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Cut</button></span>
@@ -227,39 +304,48 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     <p class="desc"><span id="linkmsg"></span> <b>Cut</b> drops all traffic on that link except to its own router (like losing the cellular signal); it restores itself after the chosen time, and only one link can be cut at a time so REDLAB keeps its SSH access. <b>Primary path</b> sets the MPTCP backup flag: “Singtel first” marks Simba as backup, so traffic moves to Singtel and Simba is only used if Singtel fails. Takes effect without restarting the tunnel.</p>
   </div>
 
-  <div class="panel sched" id="jetp" hidden>
-    <div class="bar">
-      <label>Jetson split</label>
-      <span role="group" aria-label="Split" id="jsplit"><button data-w="1.0">All Simba</button><button data-w="0.5" class="on">Balanced</button><button data-w="0.0">All Singtel</button></span>
-      <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Split weight to Simba">
-      <span class="chip" id="jwcur">w=0.50</span>
-      <span class="spacer"></span>
-      <button id="jload" class="primary">Load test 30s</button>
-      <span id="jmsg"></span>
+  <div class="panel jet v-kpi" id="jetp" hidden>
+    <div class="jhead"><h2>Agregasi bonding · otak Jetson</h2><span class="chip" id="jwcur">w=0.50</span></div>
+    <div class="jstat">
+      <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Total throughput</div></div>
+      <div class="jk eff"><div class="jkv" id="keff">–</div><div class="jkl">Efisiensi agregasi</div></div>
+      <div class="jk"><div class="jkv" id="ksig">–</div><div class="jkl">Kapasitas 2 SIM</div></div>
     </div>
-    <div class="chips" id="jkpis">
-      <span class="chip">Total <b id="ktot">–</b></span>
-      <span class="chip">Efisiensi agregasi <b id="keff">–</b></span>
-      <span class="chip">Σ 2 SIM <b id="ksig">–</b></span>
+    <div class="splitbar" aria-hidden="true"><span id="sbar1" style="width:50%"></span><span id="sbar2" style="width:50%"></span></div>
+    <div class="splitlab"><span class="s1" id="slab1">Simba 50%</span><span class="s2" id="slab2">Singtel 50%</span></div>
+    <div class="jrow">
+      <span role="group" aria-label="Split" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Seimbang</button><button data-w="0.0">Singtel</button></span>
+      <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Pembagian beban ke Simba">
+      <button id="jload" class="primary">Uji beban 30 dtk</button>
     </div>
-    <p class="desc">Atur pembagian beban jalur <b>Jetson multipath</b> ke dua SIM (geser = berapa banyak ke Simba). <b>Load test</b> mendorong trafik bitrate tinggi ~30 dtk supaya dua SIM terisi penuh dan efisiensi agregasi terlihat — ini memakai kuota seluler.</p>
+    <p class="desc"><span id="jmsg"></span>Geser untuk mengatur pembagian beban kamera ke dua SIM, atau biarkan Jetson yang memutuskan. <b>Uji beban</b> mendorong trafik bitrate tinggi ~30 dtk agar dua SIM terisi penuh dan agregasi terlihat (memakai kuota seluler).</p>
+  </div>
+
+  <div class="panel refcard v-kpi" id="refp">
+    <h2>Posisi vs solusi komersial (Jason)</h2>
+    <div class="refrow">
+      <div class="refitem ours"><div class="nm">Jetson AI bonding — kita <span class="b">ML adaptif</span></div><div class="d">Sub-stream pinned per-SIM + controller LinUCB di edge. Agregasi penuh satu video (≈38 Mb/s), tetap jalan saat MPTCP tumbang, split adaptif dari tren tiap SIM.</div></div>
+      <div class="refitem"><div class="nm">Kognitive MPK-VPN <span class="b">heuristik</span></div><div class="d">Bonding + PEP berbasis aturan reaktif. Tak ada penjadwalan belajar / antisipatif.</div></div>
+      <div class="refitem"><div class="nm">Bondix S.A.NE <span class="b">heuristik</span></div><div class="d">Micro-retransmit + duplikasi paket; split by ukur-saat-ini. Tangguh tapi tak adaptif-belajar.</div></div>
+    </div>
+    <p class="note">Riset: banding goodput &amp; outage di kondisi volatil (fade/dropout maritim). Target pembeda: ↓ outage ~11% relatif vs heuristik reaktif.</p>
   </div>
 
   </div><!--/colL-->
 
   <div class="colM">
-  <div class="panel" id="stage">
+  <div class="panel v-mon" id="stage">
     <canvas id="diag" width="1160" height="460" aria-label="Flow diagram from RPi to VPS over two links"></canvas>
     <span class="status st-ok" id="status">Normal</span>
   </div>
 
-  <div class="readouts">
+  <div class="readouts v-mon">
     <div class="panel ro"><div class="k"><span class="sw" style="background:var(--simba)"></span>Simba · RUTM30 (wan1)</div><div class="v" id="v1">0 <small>kbps</small></div><div class="chips" id="c1"></div></div>
     <div class="panel ro"><div class="k"><span class="sw" style="background:var(--singtel)"></span>Singtel · RUTM16 (wan2)</div><div class="v" id="v2">0 <small>kbps</small></div><div class="chips" id="c2"></div></div>
     <div class="panel ro"><div class="k"><span class="sw" style="background:var(--ink)"></span>Total to VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
   </div>
 
-  <div class="panel tlwrap">
+  <div class="panel tlwrap v-kpi">
     <canvas id="tl" width="1160" height="190" aria-label="Upload per link over time; click to jump"></canvas>
     <div class="legend">
       <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (bonding)</span>
@@ -277,7 +363,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
     </div>
   </div>
 
-  <div class="panel latwrap">
+  <div class="panel latwrap v-kpi">
     <h2>Latency · RTT to VPS per SIM</h2>
     <canvas id="lat" width="1160" height="150" aria-label="Round-trip latency per SIM over time"></canvas>
     <div class="legend">
@@ -291,13 +377,13 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   </div><!--/colM-->
 
   <div class="colR">
-  <div class="cols">
+  <div class="cols v-mon">
     <div class="panel"><h2>Events</h2><ol class="ev" id="events"></ol><p class="note" id="pnote"></p></div>
     <div class="panel"><h2>Summary per event</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"></tbody></table></div>
       <p class="note">“Stall” = consecutive seconds with total upload &lt; 500 kbps after the event. The RPi queue is a model estimate (constant camera rate minus what was sent), not a measurement.</p></div>
   </div>
 
-  <div class="panel cmp" id="cmpp" hidden>
+  <div class="panel cmp v-kpi" id="cmpp" hidden>
     <div class="hd"><h2>Scheduler comparison</h2><span class="spacer"></span><button id="cmpcsv">Export CSV</button><button id="cmpclear">Clear table</button></div>
     <div class="tbl"><table><thead><tr><th>Scheduler</th><th>Start (UTC)</th><th>Duration</th><th>Avg total</th><th>Simba / Singtel</th><th>Stall seconds</th><th>Longest stall</th><th>Tunnel 2 subflows</th><th>Link cuts</th></tr></thead><tbody id="cmpb"></tbody></table></div>
     <p class="note">One row = one scheduler period since it was applied. The <b>first 25 seconds</b> after a switch (OpenVPN tunnel restart) are not counted. Green = best in its column. The table is kept in this browser, so it survives a page reload. Compare rows with the same conditions (“Link cuts” column).</p>
@@ -550,7 +636,8 @@ let drag=false; tv.addEventListener('pointerdown',e=>{drag=true; tv.setPointerCa
 function chips(el,list){ el.innerHTML=list.map(([t,c])=>`<span class="chip ${c||''}">${t}</span>`).join(''); }
 function readouts(row){
   const a=row[1], b=row[2], tot=a+b;
-  $('v1').innerHTML=`${a} <small>kbps</small>`; $('v2').innerHTML=`${b} <small>kbps</small>`; $('v3').innerHTML=`${tot} <small>kbps</small>`;
+  const bw=k=> k>=10000 ? `${(k/1000).toFixed(1)} <small>Mbit/s</small>` : `${k} <small>kbps</small>`;
+  $('v1').innerHTML=bw(a); $('v2').innerHTML=bw(b); $('v3').innerHTML=bw(tot);
   jetKPI(a,b);
   const c1=phys(cur,1), c2=phys(cur,2);
   const tun=row.length>=7, t1=tun?[['OpenVPN tunnel: '+(row[5]?'has subflow':'NO subflow'),row[5]?'ok':'bad']]:[], t2=tun?[['OpenVPN tunnel: '+(row[6]?'has subflow':'NO subflow'),row[6]?'ok':'bad']]:[];
@@ -848,36 +935,60 @@ $('jload').onclick=async()=>{ $('jload').disabled=true;
 $('jslider').oninput=e=>{ JET.w=+e.target.value/100; jetRenderW(); };
 $('jslider').onchange=e=>jetSetW(+e.target.value/100);
 function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
-  el.textContent=(tot/1000).toFixed(1)+' Mb'; $('keff').textContent=Math.min(100,Math.round(tot/JET.sigma*100))+'%'; $('ksig').textContent=(JET.sigma/1000).toFixed(1)+' Mb';
+  el.textContent=(tot/1000).toFixed(1)+' Mb/s';
+  const eff=Math.min(100,Math.round(tot/JET.sigma*100)); const ke=$('keff');
+  ke.textContent=eff+'%'; ke.style.color=eff>=70?'var(--good)':eff>=35?'var(--warn)':'var(--muted)';
+  $('ksig').textContent=(JET.sigma/1000).toFixed(1)+' Mb/s';
+  const p1=tot>50?Math.round(a/tot*100):50;
+  $('sbar1').style.width=p1+'%'; $('sbar2').style.width=(100-p1)+'%';
+  $('slab1').textContent='Simba '+p1+'%'; $('slab2').textContent='Singtel '+(100-p1)+'%';
   if(JET.loadUntil){ const left=Math.ceil((JET.loadUntil-Date.now())/1000);
-    if(left>0){ $('jload').textContent='Load test… '+left+'s'; $('jload').disabled=true; }
-    else { JET.loadUntil=0; $('jload').textContent='Load test 30s'; $('jload').disabled=false; } } }
+    if(left>0){ $('jload').textContent='Uji beban… '+left+'s'; $('jload').disabled=true; }
+    else { JET.loadUntil=0; $('jload').textContent='Uji beban 30 dtk'; $('jload').disabled=false; } } }
 async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; return; }
   $('jetp').hidden=false;
   try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); }
   catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; } }
 function jetStop(){ $('jetp').hidden=true; }
 
-/* ---------- camera video (MediaMTX on the VPS) ---------- */
+/* ---------- dual camera video (MediaMTX on the VPS) ---------- */
 const VPS='168.144.105.155';
-const VID={path:'live/cam', proto:'hls', on:true};
-try{ Object.assign(VID, JSON.parse(localStorage.getItem('twin.video.v1')||'{}')); }catch(e){}
-function vsave(){ try{ localStorage.setItem('twin.video.v1',JSON.stringify(VID)); }catch(e){} }
-function vurl(){ return VID.proto==='webrtc' ? `http://${VPS}:8889/${VID.path}/` : `http://${VPS}:8888/${VID.path}/`; }
-function vload(){
-  const u=vurl(), f=$('vframe'), m=$('vmsg');
-  $('vpath').value=VID.path; [...$('vproto').children].forEach(b=>b.className=b.dataset.p===VID.proto?'on':'');
-  $('vopen').href=u; $('vtoggle').textContent=VID.on?'Hide video':'Show video'; $('vbox').hidden=!VID.on;
-  $('vnote').textContent = VID.proto==='hls' ? 'HLS lags the live data by several seconds.' : 'WebRTC is near real-time; if it stays black, switch to HLS.';
+const VID={pathA:'dlink', pathB:'hik', proto:'webrtc', on:true};  // WebRTC default: decodes Hik H265 where HLS can't
+try{ Object.assign(VID, JSON.parse(localStorage.getItem('twin.video.v2')||'{}')); }catch(e){}
+function vsave(){ try{ localStorage.setItem('twin.video.v2',JSON.stringify(VID)); }catch(e){} }
+function vurl(path){ return VID.proto==='webrtc' ? `http://${VPS}:8889/${path}/` : `http://${VPS}:8888/${path}/`; }
+function vloadOne(selId, frameId, msgId, path){
+  const u=vurl(path), f=$(frameId), m=$(msgId); $(selId).value=path;
+  m.classList.remove('hint');
   if(location.protocol==='https:'){ f.removeAttribute('src'); m.hidden=false;
-    m.textContent='The video cannot play inside this claude.ai page (the VPS stream is plain HTTP). Open http://localhost:8799 on REDLAB, or use “Open in new tab”.'; return; }
-  m.hidden=true; if(VID.on){ if(f.getAttribute('src')!==u) f.src=u; } else f.removeAttribute('src');
+    m.textContent='Video tak bisa diputar di halaman claude.ai (stream VPS plain HTTP). Buka http://localhost:8799 di REDLAB.'; return; }
+  if(VID.on){ if(f.getAttribute('src')!==u) f.src=u; } else f.removeAttribute('src');
+  // Hik streams are H265/HEVC. WebRTC decodes them on HEVC-capable browsers; HLS (hls.js) cannot.
+  // Show a hint only on HLS, where the Hik frame will be black.
+  if(VID.on && /^hik/.test(path) && VID.proto==='hls'){ m.hidden=false; m.classList.add('hint');
+    m.textContent='Hik = H265/4MP · pakai WebRTC untuk melihatnya (HLS tak bisa decode HEVC di browser).'; }
+  else { m.hidden=true; }
 }
-$('vpath').onchange=e=>{ VID.path=e.target.value; vsave(); vload(); };
+function vload(){
+  [...$('vproto').children].forEach(b=>b.className=b.dataset.p===VID.proto?'on':'');
+  $('vtoggle').textContent=VID.on?'Sembunyikan':'Tampilkan'; $('vgrid').hidden=!VID.on;
+  $('vnote').textContent = VID.proto==='hls' ? 'HLS tertinggal beberapa detik · Hik H265 hitam di HLS, pakai WebRTC' : 'WebRTC nyaris real-time · mendukung Hik H265';
+  vloadOne('vpathA','vframeA','vmsgA',VID.pathA);
+  vloadOne('vpathB','vframeB','vmsgB',VID.pathB);
+}
+$('vpathA').onchange=e=>{ VID.pathA=e.target.value; vsave(); vload(); };
+$('vpathB').onchange=e=>{ VID.pathB=e.target.value; vsave(); vload(); };
 [...$('vproto').children].forEach(b=>b.onclick=()=>{ VID.proto=b.dataset.p; vsave(); vload(); });
-$('vreload').onclick=()=>{ const f=$('vframe'); f.removeAttribute('src'); setTimeout(vload,50); };
+$('vreload').onclick=()=>{ ['vframeA','vframeB'].forEach(id=>$(id).removeAttribute('src')); setTimeout(vload,50); };
 $('vtoggle').onclick=()=>{ VID.on=!VID.on; vsave(); vload(); };
 vload();
+
+/* ---------- tab switching (Monitor / Riset KPI) ---------- */
+function setTab(t){ document.body.dataset.tab=t;
+  [...$('tabs').children].forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
+  try{ localStorage.setItem('twin.tab',t); }catch(e){}
+  requestAnimationFrame(()=>{ resize(); if(D) draw(true); }); }
+[...$('tabs').children].forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
 /* ---------- loop ---------- */
 function draw(force){ if(!D||!D.rows.length) return; const row=rowAt(cur); if(!row) return; drawTL(); drawLat(); readouts(row); if(force) drawDiagram(row,0); }
@@ -897,6 +1008,7 @@ function resize(){ layout(); tlLayout(); latLayout(); if(D) draw(true); }
 addEventListener('resize',resize);
 try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
 resize();
+setTab((()=>{ try{ return localStorage.getItem('twin.tab')||'monitor'; }catch(e){ return 'monitor'; } })());
 $('preset').value='live'; startLive();
 requestAnimationFrame(frame);
 </script>
