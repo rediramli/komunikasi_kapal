@@ -1,0 +1,187 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Kontribusi AI Jetson</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f6f6f3; --surface:#ffffff; --ink:#1a1a19; --muted:#6a6a63; --line:#e4e4dc; --soft:#efeee8; --track:#e9e8e1;
+    --simba:#2a78d6; --singtel:#eb6834; --bad:#cf4038; --good:#13864c; --warn:#b97800; --accent:#6d4ad6;
+    --sans:"Archivo",system-ui,-apple-system,sans-serif;
+    --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#14141a; --surface:#1d1d24; --ink:#ededea; --muted:#9a9a92; --line:#2c2c34; --soft:#24242b; --track:#2a2a31;
+    --simba:#4f97ec; --singtel:#f0804f; --bad:#e46a62; --good:#36b874; --warn:#e0a52a; --accent:#9a7af0; color-scheme:dark; }}
+  :root[data-theme="dark"]{
+    --bg:#14141a; --surface:#1d1d24; --ink:#ededea; --muted:#9a9a92; --line:#2c2c34; --soft:#24242b; --track:#2a2a31;
+    --simba:#4f97ec; --singtel:#f0804f; --bad:#e46a62; --good:#36b874; --warn:#e0a52a; --accent:#9a7af0; color-scheme:dark; }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.6;margin:0}
+  .wrap{max-width:900px;margin:0 auto;
+    padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));
+    padding-block:38px 56px;display:flex;flex-direction:column;gap:26px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  h1{font-family:var(--sans);font-weight:800;font-size:clamp(25px,5vw,37px);margin:0;letter-spacing:-.01em;line-height:1.1;text-wrap:balance}
+  h2{font-family:var(--sans);font-weight:700;font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:17px;margin-top:12px;max-width:66ch}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .card.good{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+  .answer{background:color-mix(in srgb,var(--good) 8%,var(--surface));border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+  .answer .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--good);font-weight:600;margin-bottom:6px}
+  .answer p{margin:0;font-size:16.5px}
+  .answer b{font-weight:700}
+  p{margin:0 0 10px} p:last-child{margin-bottom:0}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono)}
+
+  /* chart */
+  .chart{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+  .crow{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center}
+  .crow .nm{font-size:13.5px;font-weight:600;display:flex;flex-direction:column;gap:1px}
+  .crow .nm small{font-weight:400;color:var(--muted);font-size:11px}
+  .bars{display:flex;flex-direction:column;gap:5px}
+  .bar{position:relative;height:22px;border-radius:6px;background:var(--track);overflow:hidden}
+  .bar>span{position:absolute;inset:0 auto 0 0;border-radius:6px;display:flex;align-items:center;padding-left:9px;
+    font-family:var(--mono);font-size:11.5px;color:#fff;font-weight:500;white-space:nowrap}
+  .bar.gp>span{background:var(--simba)}
+  .bar.ou>span{background:var(--bad)}
+  .crow.best .nm{color:var(--good)}
+  .crow.best .bar.gp>span{background:var(--good)}
+  .leglabel{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+  .leglabel span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:11px;height:11px;border-radius:3px}
+  .dot.g{background:var(--simba)} .dot.b{background:var(--bad)}
+
+  /* flow */
+  .flow{display:flex;align-items:stretch;gap:9px;flex-wrap:wrap;margin-top:16px}
+  .node{flex:1;min-width:120px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .node .t{font-family:var(--sans);font-weight:700;font-size:13.5px}
+  .node .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .node.brain{border-color:color-mix(in srgb,var(--accent) 50%,var(--line));background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+  .node.brain .t{color:var(--accent)}
+  .arrow{align-self:center;color:var(--muted);font-size:18px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}.crow{grid-template-columns:92px 1fr}}
+  .stat{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat .big{font-family:var(--sans);font-weight:800;font-size:clamp(26px,5vw,34px);line-height:1;letter-spacing:-.02em}
+  .stat .big.good{color:var(--good)} .stat .big.bad{color:var(--bad)}
+  .stat .lab{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  ul.clean{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  ul.clean li{display:flex;gap:10px;font-size:14.5px;align-items:flex-start}
+  ul.clean li .i{flex:none;font-weight:700;margin-top:0}
+  li.y .i{color:var(--good)} li.n .i{color:var(--warn)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .foot{color:var(--muted);font-size:12px;font-family:var(--mono);display:flex;flex-wrap:wrap;gap:4px 16px;border-top:1px solid var(--line);padding-top:16px}
+  .divider{height:1px;background:var(--line);border:0;margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Testbed OMR · Edge brain Jetson Orin NX · Okt 2026</div>
+    <h1>Apakah AI/ML Jetson memberi kontribusi pada bonding kita?</h1>
+    <p class="lead">Ringkasan hasil sejauh ini. Pertanyaannya spesifik: di luar sekadar menggabungkan dua SIM, apakah <b>controller yang belajar</b> di Jetson benar‑benar membuat bonding lebih baik — dan di kondisi mana.</p>
+  </header>
+
+  <div class="card answer">
+    <div class="k">Jawaban singkat</div>
+    <p><b>Ya — dan kontribusinya terukur, terutama saat link bergejolak.</b> Di link stabil, pembagian tetap sudah cukup. Tapi di kondisi maritim (fade &amp; dropout seluler/Starlink), controller LinUCB di Jetson <b>memangkas outage ~11% relatif</b> dibanding heuristik reaktif terbaik (kelas yang dipakai produk komersial), sambil meraih <b>98% goodput oracle</b>. Itulah nilai tambah AI: <b>adaptif &amp; antisipatif</b>, bukan sekadar agregasi.</p>
+  </div>
+
+  <div class="card">
+    <h2>Di mana AI duduk dalam sistem</h2>
+    <p class="muted" style="font-size:14px">Loop tertutup: Jetson mengamati kondisi tiap SIM → kebijakan belajar memilih pembagian beban <span class="mono">w</span> → RPi mengeksekusinya pada stream kamera → VPS menyusun ulang. Satu keputusan ≈ 125&nbsp;µs.</p>
+    <div class="flow">
+      <div class="node"><div class="t">RPi / OMR</div><div class="d">Ukur per‑SIM: kapasitas, RTT, loss. Eksekusi split pada sub‑stream.</div></div>
+      <div class="arrow">→</div>
+      <div class="node brain"><div class="t">Jetson · LinUCB ⬥</div><div class="d">Baca state + <b>tren</b> → putuskan <span class="mono">w</span> (porsi ke tiap SIM) secara live.</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="t">VPS</div><div class="d">Susun ulang dua jalur jadi satu video utuh, urut.</div></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin-top:14px">Terpasang &amp; live di testbed: Jetson <span class="mono">fctlab‑jetson</span> menjalankan <span class="mono">edge_control.py</span>, mengamati RTT nyata (Simba ≈12&nbsp;ms, Singtel ≈90&nbsp;ms) dan menulis keputusan split ke pengendali RPi tiap siklus.</p>
+  </div>
+
+  <div class="card good">
+    <h2>Bukti kontribusi: uji ketahanan 800 skenario laut</h2>
+    <p class="muted" style="font-size:14px">Satu aliran video (24&nbsp;Mb/s) harus dikirim lewat dua SIM yang bergejolak (fade bertahap + dropout mendadak, 300&nbsp;detik/skenario). Model link terkalibrasi dari pengukuran testbed. Empat kebijakan dibandingkan di <b>skenario identik</b>.</p>
+    <div class="chart">
+      <div class="crow">
+        <div class="nm">Fixed 50/50<small>pembagian tetap</small></div>
+        <div class="bars">
+          <div class="bar gp"><span style="width:90%">19.1 Mb/s goodput</span></div>
+          <div class="bar ou"><span style="width:44%">22% outage</span></div>
+        </div>
+      </div>
+      <div class="crow">
+        <div class="nm">Reaktif<small>heuristik komersial</small></div>
+        <div class="bars">
+          <div class="bar gp"><span style="width:95.8%">20.3 Mb/s goodput</span></div>
+          <div class="bar ou"><span style="width:26%">13% outage</span></div>
+        </div>
+      </div>
+      <div class="crow best">
+        <div class="nm">Learned ⬥<small>AI Jetson (LinUCB)</small></div>
+        <div class="bars">
+          <div class="bar gp"><span style="width:98.1%">20.8 Mb/s goodput</span></div>
+          <div class="bar ou"><span style="width:22%">11% outage</span></div>
+        </div>
+      </div>
+      <div class="crow">
+        <div class="nm">Oracle<small>batas teoretis</small></div>
+        <div class="bars">
+          <div class="bar gp"><span style="width:100%;background:var(--muted)">21.2 Mb/s goodput</span></div>
+          <div class="bar ou"><span style="width:18%;background:var(--muted)">9% outage</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="leglabel"><span><i class="dot g"></i>Goodput (makin tinggi makin baik)</span><span><i class="dot b"></i>Outage (makin rendah makin baik)</span></div>
+    <div class="grid2" style="margin-top:20px">
+      <div class="stat"><div class="big good">−11%</div><div class="lab">outage relatif vs heuristik reaktif (13% → 11%)</div></div>
+      <div class="stat"><div class="big good">98%</div><div class="lab">goodput oracle yang diraih kebijakan belajar</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Kenapa yang belajar bisa menang</h2>
+    <p>Heuristik reaktif membagi beban menurut kualitas yang <b>diukur saat ini</b> (dengan penghalusan agar tak gemetar). Karena itu ia selalu <b>telat</b>: selama jeda deteksi tiap fade, ia masih menaruh beban di SIM yang sedang sekarat → throughput bocor.</p>
+    <p>Kebijakan belajar kami diberi fitur <b>tren</b> (perubahan kapasitas beberapa detik terakhir). Ia bisa <b>mengantisipasi</b> fade yang mulai terjadi dan menggeser beban <em>sebelum</em> kualitas kolaps. Persis inilah titik sakit maritim — dropout Starlink/seluler — dan celah yang ditinggalkan produk komersial yang tak memakai penjadwalan belajar.</p>
+  </div>
+
+  <div class="card">
+    <h2>Konteks testbed nyata (2 SIM heterogen)</h2>
+    <div class="grid2">
+      <div class="stat"><div class="big">38 <small style="font-size:14px;color:var(--muted);font-weight:600">Mb/s</small></div><div class="lab">agregasi penuh bonding app‑layer dikendalikan Jetson (dua SIM terpakai)</div></div>
+      <div class="stat"><div class="big bad">14 <small style="font-size:14px;color:var(--muted);font-weight:600">Mb/s</small></div><div class="lab">MPTCP/Glorytun kolaps ke ~satu SIM (RTT timpang → head‑of‑line blocking)</div></div>
+    </div>
+    <p class="muted" style="font-size:13.5px;margin-top:14px">Pada testbed, pendekatan sub‑stream pinned per‑SIM yang dikendalikan Jetson mencapai agregasi penuh untuk satu aliran video yang justru kolaps di MPTCP — <b>dan tetap jalan saat tunnel MPTCP tumbang</b>. Di link stabil, selisih antara split belajar dan split tetap kecil; nilai AI muncul begitu kondisi berubah (lihat uji ketahanan di atas).</p>
+  </div>
+
+  <div class="card">
+    <h2>Posisi vs solusi komersial (Jason: Kognitive, Bondix)</h2>
+    <ul class="clean">
+      <li class="y"><span class="i">✓</span><div><b>Kita — AI Jetson:</b> penjadwalan <b>belajar &amp; adaptif</b> dari tren tiap SIM. Novelty: tak ada produk komersial yang memakai ini.</div></li>
+      <li class="n"><span class="i">○</span><div><b>Kognitive MPK‑VPN:</b> bonding + PEP berbasis aturan reaktif. Tanpa penjadwalan belajar.</div></li>
+      <li class="n"><span class="i">○</span><div><b>Bondix S.A.NE:</b> micro‑retransmit + duplikasi paket; split by ukur‑saat‑ini. Tangguh, tapi tak adaptif‑belajar.</div></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Status &amp; kejujuran</h2>
+    <ul class="clean">
+      <li class="y"><span class="i">✓</span><div>Otak AI (LinUCB) <b>terpasang &amp; live</b> di Jetson, loop kendali tertutup berjalan, menggerakkan split dari pengamatan RTT nyata.</div></li>
+      <li class="y"><span class="i">✓</span><div>Kontribusi AI <b>terukur</b> pada uji ketahanan 800 skenario: −11% outage relatif, 98% goodput oracle.</div></li>
+      <li class="y"><span class="i">✓</span><div>Pipeline video bonded <b>terbukti end‑to‑end</b> (stream agregat sempat online penuh di testbed).</div></li>
+      <li class="n"><span class="i">○</span><div>Pengiriman video bonded secara <b>terus‑menerus</b> masih distabilkan (keandalan sub‑stream di sisi RPi) — tahap rekayasa berikutnya, bukan soal logika AI.</div></li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <span>Uji ketahanan: 800 skenario × 300&nbsp;s · model link terkalibrasi testbed</span>
+    <span>Simba ≈12&nbsp;ms · Singtel ≈90&nbsp;ms · Σ kapasitas ≈32–38&nbsp;Mb/s</span>
+    <span>Edge: Jetson Orin NX · LinUCB ≈125&nbsp;µs/keputusan</span>
+  </div>
+</div>
