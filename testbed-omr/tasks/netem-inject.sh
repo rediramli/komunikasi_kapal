@@ -39,12 +39,27 @@ case "$SCN" in
   *)  echo "ERR unknown scenario '$SCN'"; exit 1 ;;
 esac
 
-tc qdisc del dev "$DEV" root 2>/dev/null
-if [ -n "$P" ]; then
-  tc qdisc add dev "$DEV" root netem $P || { echo "ERR netem apply failed on $DEV"; exit 1; }
-fi
 ID=$(date +%s); echo "$ID" > /tmp/netem_$DEV.id
-# mandatory auto-restore, detached so an SSH/control blip can't leave it stuck
-setsid sh -c "sleep $SECS; [ \"\$(cat /tmp/netem_$DEV.id 2>/dev/null)\" = $ID ] && { tc qdisc del dev $DEV root 2>/dev/null; rm -f /tmp/netem_$DEV.id; logger -t netem \"auto-restore $DEV\"; }" </dev/null >/dev/null 2>&1 &
-echo "APPLIED $SCN on $DEV: netem ${P:-<none>}  (auto-restore in ${SECS}s)"
+# OMR's path tracker reacts to a degraded WAN: when netem raises wan RTT it fires
+# `mptcp reload`, which tears the egress qdisc back to noqueue within ~4 s -- so a
+# single `tc qdisc add` does not survive. We HOLD the condition by re-asserting it
+# once a second for the whole window (netem only; S0 leaves the link clean). The
+# loop is detached and self-limiting (stops at SECS or when the id file changes),
+# and clears the qdisc on exit, so an SSH/control blip can never leave it stuck.
+if [ -n "$P" ]; then
+  setsid sh -c "
+    end=\$(( \$(date +%s) + $SECS ))
+    while [ \$(date +%s) -lt \$end ] && [ \"\$(cat /tmp/netem_$DEV.id 2>/dev/null)\" = $ID ]; do
+      tc qdisc show dev $DEV 2>/dev/null | grep -q netem || tc qdisc replace dev $DEV root netem $P
+      sleep 1
+    done
+    tc qdisc del dev $DEV root 2>/dev/null; rm -f /tmp/netem_$DEV.id; logger -t netem \"auto-restore $DEV\"
+  " </dev/null >/dev/null 2>&1 &
+  sleep 1
+else
+  # S0: ensure the link is clean, and still honour the id/auto-restore contract.
+  tc qdisc del dev "$DEV" root 2>/dev/null
+  setsid sh -c "sleep $SECS; [ \"\$(cat /tmp/netem_$DEV.id 2>/dev/null)\" = $ID ] && rm -f /tmp/netem_$DEV.id" </dev/null >/dev/null 2>&1 &
+fi
+echo "APPLIED $SCN on $DEV: netem ${P:-<none>}  (held, auto-restore in ${SECS}s)"
 echo "now: $(tc qdisc show dev $DEV | head -1)"

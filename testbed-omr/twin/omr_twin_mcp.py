@@ -5,11 +5,11 @@ Berjalan di REDLAB, dipanggil oleh aplikasi Claude desktop. Mengambil data live 
 RPi OMR lewat SSH (pakai SSH key yang dipasang oleh setup-ssh-key.sh).
 
 Tools:
-  omr_live(since)     baris sampel 1 Hz sejak epoch `since` + info tes failover terakhir (read-only)
+  omr_live(since)     baris sampel sejak epoch `since`, info uji terakhir, usia permintaan SSH, dan estimasi selisih jam (read-only)
   omr_start_test(dur) mulai failover-test.sh mode otomatis di RPi (aksi)
 Tanpa dependensi selain Python 3 dan ssh.
 """
-import json, os, subprocess, sys
+import json, os, subprocess, sys, time
 
 HOST = os.environ.get("OMR_RPI", "root@100.102.109.59")
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
@@ -48,7 +48,13 @@ LIVE_CMD = r'''
 S=%(since)d
 [ -f /root/omr-live.sh ] || { echo NEED_INSTALL; exit 0; }
 date +%%s > /tmp/omr_live.ping
-pgrep -f omr-live.sh >/dev/null 2>&1 || { nohup sh /root/omr-live.sh </dev/null >/dev/null 2>&1 & sleep 2; }
+if [ -s /tmp/omr_live.pid ] &&
+   kill -0 "$(cat /tmp/omr_live.pid)" 2>/dev/null &&
+   tr '\000' ' ' < "/proc/$(cat /tmp/omr_live.pid)/cmdline" 2>/dev/null | grep -Fq '/root/omr-live.sh'; then
+  :
+else
+  nohup sh /root/omr-live.sh </dev/null >/dev/null 2>&1 & sleep 2
+fi
 echo "NOW $(date +%%s)"
 awk -F, -v s=$S '$1>s' /tmp/omr_live.csv 2>/dev/null | tail -300 | sed 's/^/R /'
 D=$(ls -dt /root/fotest_*/ 2>/dev/null | head -1)
@@ -67,10 +73,12 @@ def ssh(cmd, stdin=None, timeout=20):
 
 def omr_live(args):
     since = int(args.get("since") or 0)
+    started = time.time()
     out = ssh(LIVE_CMD % {"since": since})
     if out.startswith("NEED_INSTALL"):
         ssh("cat > /root/omr-live.sh && chmod +x /root/omr-live.sh", stdin=SAMPLER)
         out = ssh(LIVE_CMD % {"since": since})
+    finished = time.time()
     res = {"now": None, "rows": [], "test": None}
     test = {"dir": None, "start": None, "done": False, "plan": [], "marks": []}
     for line in out.splitlines():
@@ -91,6 +99,9 @@ def omr_live(args):
     res["columns"] = ["epoch", "simba_kbps", "singtel_kbps", "simba_up", "singtel_up",
                       "openvpn_sf_simba", "openvpn_sf_singtel", "simba_cut_auto", "singtel_cut_auto",
                       "rtt_simba_ms", "rtt_singtel_ms", "rtt_tunnel_ms"]
+    res["ssh_ms"] = round((finished - started) * 1000)
+    if res["now"] is not None:
+        res["clock_skew_s"] = round(res["now"] - (started + finished) / 2, 1)
     return res
 
 def omr_start_test(args):

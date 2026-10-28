@@ -1,46 +1,72 @@
-<title>Digital Twin MPTCP</title>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Digital Twin MPTCP · Live Bonding Dashboard</title>
+<meta name="description" content="Live digital twin of the maritime MPTCP gateway: RPi OMR over two cellular links (Simba &amp; Singtel) to the VPS, Jetson LinUCB AI traffic split, failover tests and dual-camera video.">
+<meta name="theme-color" content="#0a0e14">
 <meta name="claude:viewport-fit-sides" content="cover">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('twin.theme')||'dark';}catch(e){document.documentElement.dataset.theme='dark';}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap">
 <style>
 /* Layout: control bar -> live diagram (RPi -> 2 links -> VPS) -> link readouts -> timeline -> events & summary */
 :root{
-  --bg:#f3f5f7; --surface:#ffffff; --ink:#0f1720; --muted:#5a6472; --line:#d6dbe2; --grid:#e8ebef;
-  --simba:#2a78d6; --singtel:#eb6834; --stall:#d03b3b; --good:#0b8f3a; --warn:#b97800;
+  --bg:#eef2f6; --surface:#ffffff; --surface-2:#f5f7fa; --ink:#0d1520; --muted:#5b6676; --line:#d5dce5; --grid:#e6eaf0; --track:#e9edf2;
+  --simba:#2a78d6; --singtel:#e8622c; --stall:#d23f3f; --good:#0a8f45; --warn:#b97800;
+  --shadow:0 1px 2px rgba(16,23,32,.05),0 10px 26px -16px rgba(16,23,32,.22); --hi:rgba(255,255,255,0); --radius:12px;
   --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#12161b; --surface:#1a2027; --ink:#eef1f4; --muted:#a3adb9; --line:#2e3742; --grid:#242c35;
-  --simba:#3987e5; --singtel:#eb6834; --stall:#e66767; --good:#3cc36a; --warn:#e0a52a; color-scheme:dark}}
+  --bg:#0a0e14; --surface:#111821; --surface-2:#16202b; --ink:#e8edf3; --muted:#93a0b0; --line:#233041; --grid:#1a2330; --track:#1a2330;
+  --simba:#4c9cff; --singtel:#ff7a45; --stall:#ff5c6c; --good:#34d27b; --warn:#f2b33d;
+  --shadow:0 12px 32px -18px rgba(0,0,0,.85); --hi:rgba(255,255,255,.035); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#12161b; --surface:#1a2027; --ink:#eef1f4; --muted:#a3adb9; --line:#2e3742; --grid:#242c35;
-  --simba:#3987e5; --singtel:#eb6834; --stall:#e66767; --good:#3cc36a; --warn:#e0a52a; color-scheme:dark}
+  --bg:#0a0e14; --surface:#111821; --surface-2:#16202b; --ink:#e8edf3; --muted:#93a0b0; --line:#233041; --grid:#1a2330; --track:#1a2330;
+  --simba:#4c9cff; --singtel:#ff7a45; --stall:#ff5c6c; --good:#34d27b; --warn:#f2b33d;
+  --shadow:0 12px 32px -18px rgba(0,0,0,.85); --hi:rgba(255,255,255,.035); color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(900px 520px at 0% -8%,color-mix(in srgb,var(--simba) 11%,transparent),transparent 62%),
+    radial-gradient(900px 520px at 100% -8%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 62%),
+    radial-gradient(800px 500px at 50% 115%,color-mix(in srgb,var(--singtel) 6%,transparent),transparent 60%),var(--bg);
+  background-attachment:fixed}
 .wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:14px}
-header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
-h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:28px;height:28px;border-radius:9px;flex:none;position:relative;background:linear-gradient(135deg,var(--simba),var(--accent) 55%,var(--singtel));box-shadow:0 4px 16px -4px color-mix(in srgb,var(--accent) 65%,transparent)}
+.logo::before,.logo::after{content:"";position:absolute;left:6px;right:6px;height:3px;border-radius:3px;background:rgba(255,255,255,.92)}
+.logo::before{top:9px} .logo::after{bottom:9px;opacity:.7}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.015em;text-wrap:balance;background:linear-gradient(90deg,var(--ink) 40%,color-mix(in srgb,var(--ink) 55%,var(--accent)));-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{color:var(--muted);margin:0;max-width:70ch}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(16,23,32,.04),0 2px 6px rgba(16,23,32,.03)}
+.panel{background:linear-gradient(180deg,var(--hi),transparent 48px),var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);transition:border-color .25s ease,box-shadow .25s ease}
+.panel:hover{border-color:color-mix(in srgb,var(--line) 65%,var(--muted))}
 .bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px}
 .bar label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-select,button,.filebtn{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
+select,button,.filebtn{font:inherit;font-size:13px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .12s ease,box-shadow .18s ease,filter .18s ease}
+button:not(:disabled):hover,select:not(:disabled):hover,.filebtn:hover{border-color:color-mix(in srgb,var(--simba) 55%,var(--line));background:color-mix(in srgb,var(--simba) 9%,var(--surface-2))}
+button:not(:disabled):active{transform:translateY(1px) scale(.98)}
 button:focus-visible,select:focus-visible,.filebtn:focus-within{outline:2px solid var(--simba);outline-offset:2px}
-button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.on,button.on:not(:disabled):hover{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .filebtn input{position:absolute;opacity:0;width:1px;height:1px}
 .spacer{flex:1}
 .clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
 #stage{position:relative}
 #diag{display:block;width:100%;height:auto}
-.status{position:absolute;top:10px;left:12px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid currentColor}
+.status{position:absolute;top:12px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px 5px 9px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 45%,transparent);background:color-mix(in srgb,currentColor 12%,var(--surface));box-shadow:0 0 0 4px color-mix(in srgb,currentColor 6%,transparent);transition:color .3s ease}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.8s ease-out infinite}
 .st-ok{color:var(--good)} .st-fo{color:var(--warn)} .st-stall{color:var(--stall)}
 .readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.ro{padding:10px 12px;display:grid;gap:4px;min-width:0}
+.ro{padding:12px 14px;display:grid;gap:4px;min-width:0;position:relative;overflow:hidden;--c:var(--ink);
+  background:radial-gradient(420px 140px at 0% 0%,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%),var(--surface)}
+.ro::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--c),transparent 85%)}
 .ro .k{display:flex;align-items:center;gap:8px;font-weight:600}
 .sw{width:12px;height:12px;border-radius:3px;flex:none}
-.ro .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px}
+.ro .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:600;letter-spacing:-.02em}
 .ro .v small{font-size:12px;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
@@ -81,7 +107,7 @@ td.bad{color:var(--stall);font-weight:600}
 .lk{display:inline-flex;align-items:center;gap:6px;font-weight:600}
 .lk i{width:10px;height:10px;border-radius:3px;display:inline-block}
 button.cut{border-color:var(--stall);color:var(--stall)}
-button.cut.on{background:var(--stall);border-color:var(--stall);color:#fff}
+button.cut.on,button.cut.on:not(:disabled):hover{background:var(--stall);border-color:var(--stall);color:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--stall) 25%,transparent)}
 #linkmsg{font-size:12.5px;color:var(--muted)}
 .tlctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:2px 4px 8px}
 .tlctl input[type=range]{flex:1;min-width:160px;accent-color:var(--ink)}
@@ -94,8 +120,10 @@ button.cut.on{background:var(--stall);border-color:var(--stall);color:#fff}
 .sched .desc b{color:var(--ink);font-weight:600}
 .sched .desc .warn{color:var(--warn);font-weight:600}
 #schedmsg{font-size:12.5px;color:var(--muted)}
+#schedmsg,#vpnmsg,#linkmsg,#jmsg{flex-basis:100%;min-width:0}
 button:disabled,select:disabled{opacity:.5;cursor:not-allowed}
-button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.primary,button.primary:not(:disabled):hover{background:linear-gradient(135deg,var(--simba),var(--accent));color:#fff;border-color:transparent;font-weight:600;box-shadow:0 6px 18px -8px color-mix(in srgb,var(--accent) 75%,transparent)}
+button.primary:not(:disabled):hover{filter:brightness(1.1);box-shadow:0 8px 22px -8px color-mix(in srgb,var(--accent) 90%,transparent)}
 .cmp{padding:12px 14px;min-width:0}
 .cmp .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:6px}
 .cmp .hd h2{margin:0}
@@ -108,7 +136,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 .jhead h2{margin:0}
 .jhead .chip{margin-left:auto;font-family:var(--mono);color:var(--ink);border-color:var(--line)}
 .jstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.jk{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 8px;text-align:center;min-width:0}
+.jk{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 8px;text-align:center;min-width:0;transition:border-color .2s ease}
 .jkv{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:600;line-height:1.1;color:var(--ink)}
 .jk.tot .jkv{color:var(--ink)} .jk.eff .jkv{color:var(--good)}
 .jkl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;line-height:1.25}
@@ -171,7 +199,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 }
 
 /* ===== Dual camera ===== */
-.vgrid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--grid);border-radius:0 0 10px 10px;overflow:hidden}
+.vgrid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--grid);border-radius:0 0 11px 11px;overflow:hidden}
 .vcell{background:#000;display:flex;flex-direction:column;min-width:0}
 .vlab{display:flex;align-items:center;gap:8px;padding:5px 9px;background:var(--surface)}
 .vlab select{flex:1;min-width:0}
@@ -182,8 +210,8 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 
 /* ===== AI split-decision trace (Jetson contribution, made visible) ===== */
 :root{--accent:#6d4ad6}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--accent:#9a7af0}}
-:root[data-theme="dark"]{--accent:#9a7af0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--accent:#a58bff}}
+:root[data-theme="dark"]{--accent:#a58bff}
 .jchips{margin-left:auto;display:flex;gap:6px;align-items:center}
 .jchips .chip{margin-left:0}
 .aistat{border-color:var(--line);color:var(--muted)}
@@ -227,31 +255,148 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 .refitem.ours .nm .b{color:var(--good);border-color:var(--good)}
 
 @media (min-width:1024px) and (min-aspect-ratio:1/1){ .vcell .vbox{max-width:100%;margin:0} }
+
+/* ===== v2 polish: connection pill, theme toggle, empty state, chart tooltip, entrance motion ===== */
+.conn{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .3s ease,border-color .3s ease}
+.conn i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.conn[data-s="live"]{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+.conn[data-s="live"] i{animation:pulse 1.8s ease-out infinite}
+.conn[data-s="stale"],.conn[data-s="retry"],.conn[data-s="wait"]{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.conn[data-s="off"]{color:var(--stall);border-color:color-mix(in srgb,var(--stall) 45%,var(--line))}
+button.icon{width:34px;height:32px;padding:0;display:inline-grid;place-items:center;font-size:15px;border-radius:9px}
+.empty{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;color:var(--muted);font-size:13px;border-radius:inherit;background:color-mix(in srgb,var(--surface) 78%,transparent);backdrop-filter:blur(3px)}
+.empty b{color:var(--ink);font-size:15px}
+.empty span{max-width:60ch}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--grid);border-top-color:var(--simba);border-right-color:var(--singtel);animation:spin 1s linear infinite}
+.tlwrap{position:relative}
+.tip{position:absolute;top:12px;left:0;z-index:3;pointer-events:none;min-width:170px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);box-shadow:0 10px 30px -10px rgba(0,0,0,.5);font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:3px 14px}
+.tip b{grid-column:1/-1;font-family:var(--mono);font-size:11.5px;color:var(--muted);font-weight:500;margin-bottom:2px}
+.tip span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.tip span i{width:9px;height:9px;border-radius:2px;flex:none}
+.tip em{font-style:normal;font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.chip{transition:color .2s,border-color .2s,background-color .2s}
+.chip.ok{background:color-mix(in srgb,var(--good) 9%,transparent)} .chip.bad{background:color-mix(in srgb,var(--stall) 10%,transparent)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 55%,transparent)}100%{box-shadow:0 0 0 7px transparent}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.panel{animation:rise .45s cubic-bezier(.2,.7,.2,1) both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* =====================================================================
+   v3 · "instrument console" skin — flat, dense, hairline, no gradients.
+   Overrides everything above; kept as one block so it is easy to revert.
+   ===================================================================== */
+:root,:root[data-theme="light"]{
+  --bg:#e9ebee; --surface:#f7f8f9; --surface-2:#eef0f2; --ink:#14171b; --muted:#5f6670; --line:#cdd1d6; --grid:#e0e3e7; --track:#e3e6ea;
+  --simba:#1f7fc4; --singtel:#d4571f; --stall:#c8323c; --good:#1d8a4e; --warn:#b07400; --accent:#b97a00;
+  --radius:3px; --shadow:none; --hi:transparent; --cond:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif; --bar:#dfe2e6;
+}
+:root[data-theme="dark"]{
+  --bg:#0c0e11; --surface:#13161a; --surface-2:#1a1e23; --ink:#d8dde3; --muted:#7c858f; --line:#262b32; --grid:#1c2026; --track:#1f242a;
+  --simba:#5aa9e6; --singtel:#ec7a42; --stall:#e5484d; --good:#3fb57a; --warn:#e2a336; --accent:#f0b429; --bar:#090b0d;
+}
+body{background:var(--bg);font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:none;animation:none}
+.panel:hover{border-color:var(--line)}
+h2{font-family:var(--cond);font-size:11.5px;letter-spacing:.09em;color:var(--muted);font-weight:600}
+/* app bar */
+header{background:var(--bar);border-bottom:1px solid var(--line);padding:0 12px;min-height:42px;gap:14px}
+.brand{gap:10px}
+.mark{width:22px;height:22px;flex:none}
+h1{font-family:var(--cond);font-size:16px!important;font-weight:700;letter-spacing:.02em;color:var(--ink);background:none;-webkit-background-clip:initial;background-clip:initial;display:flex;align-items:baseline;gap:8px}
+h1 .prod{font-weight:500;color:var(--muted)}
+.site{font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:12px;border-left:1px solid var(--line)}
+.ver{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--line);padding:0 5px;border-radius:2px}
+.conn{border-radius:2px;background:transparent;font-size:11px;padding:3px 9px}
+.conn i,.status::before{animation:none!important;border-radius:1px}
+button.icon{border-radius:2px;width:30px;height:28px}
+/* controls */
+select,button,.filebtn{border-radius:2px;font-size:12px;padding:5px 10px;background:var(--surface-2)}
+button:not(:disabled):hover,select:not(:disabled):hover,.filebtn:hover{background:var(--track);border-color:color-mix(in srgb,var(--muted) 50%,var(--line))}
+button:not(:disabled):active{transform:none}
+button.on,button.on:not(:disabled):hover{background:color-mix(in srgb,var(--accent) 16%,var(--surface-2));color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+button.primary,button.primary:not(:disabled):hover{background:var(--accent);color:#111;border-color:var(--accent);box-shadow:none;filter:none;font-weight:600}
+button.primary:not(:disabled):hover{background:color-mix(in srgb,var(--accent) 85%,#fff)}
+#tlspan button:first-child,#vproto button:first-child,#prio button:first-child{border-radius:2px 0 0 2px}
+#tlspan button:last-child,#vproto button:last-child,#prio button:last-child{border-radius:0 2px 2px 0}
+.bar label{font-family:var(--cond);font-size:11px;letter-spacing:.08em;font-weight:600}
+.chip,.chip.ok,.chip.bad{border-radius:2px;background:transparent;font-family:var(--mono);font-size:10.5px}
+.chip.ok::before,.chip.bad::before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;background:currentColor;vertical-align:1px}
+/* status tag on diagram */
+.status{border-radius:2px;box-shadow:none;background:var(--surface);font-family:var(--cond);font-size:11px;padding:3px 9px}
+/* readouts: instrument tiles */
+.ro{background:var(--surface);padding:8px 12px}
+.ro::before{height:2px;background:var(--c)}
+.ro .k{font-family:var(--cond);font-size:12px!important;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ro .v{font-weight:500;letter-spacing:-.03em;color:var(--ink)}
+.sw{border-radius:1px;width:8px;height:8px}
+/* tables */
+th{font-family:var(--cond);font-size:10.5px;letter-spacing:.08em}
+td.n{font-size:12px}
+tbody tr:hover td{background:var(--surface-2)}
+.emptyrow{color:var(--muted);font-size:12px;padding:10px 4px!important;font-style:normal;text-align:left;list-style:none}
+/* AI + jet panels */
+.aistep .num{border-radius:2px;background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.aidecide .wbig{font-family:var(--mono);font-weight:600;font-size:22px}
+.candrow .cb,.candrow .cb>span,.splitbar,#jwspark,.jk,.refitem{border-radius:2px}
+.vlab .tag{border-radius:2px;font-family:var(--mono)}
+.vgrid,.vwrap{border-radius:0}
+.empty{backdrop-filter:none;background:color-mix(in srgb,var(--surface) 90%,transparent)}
+.spin{border-radius:0;border-width:2px;border-color:var(--grid);border-top-color:var(--accent);border-right-color:var(--grid)}
+.tip{border-radius:2px;backdrop-filter:none;background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+/* status bar */
+.sbar{display:flex;align-items:center;gap:18px;padding:0 12px;height:24px;background:var(--bar);border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.sbar b{font-family:var(--cond);font-weight:600;letter-spacing:.08em;margin-right:4px}
+.sbar em{font-style:normal;color:var(--ink)}
+.sbar .led{display:inline-block;width:7px;height:7px;margin-right:6px;background:var(--muted);vertical-align:0}
+.sbar .led[data-s="live"]{background:var(--good)} .sbar .led[data-s="stale"],.sbar .led[data-s="retry"],.sbar .led[data-s="wait"]{background:var(--warn)} .sbar .led[data-s="off"]{background:var(--stall)}
+/* full-screen console layout: edge-to-edge bars, fixed rows, nothing clipped */
+@media (min-width:1024px) and (min-aspect-ratio:1/1){
+  #app{padding:0;gap:0;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"hd hd hd" "colL colM colR" "sb sb sb"}
+  .sbar{grid-area:sb}
+  .colL,.colM,.colR{padding:8px;gap:8px}
+  .colM{border-left:1px solid var(--line);border-right:1px solid var(--line);grid-template-rows:minmax(180px,.95fr) auto minmax(210px,1.1fr) minmax(160px,.8fr);overflow-x:hidden;overflow-y:auto;gap:6px}
+  .colR>*{margin-bottom:8px}
+  #lat{min-height:60px} #tl{min-height:90px}
+  #stage{min-height:180px}
+  .ro{padding:7px 10px}
+  .ro .v{font-size:28px;line-height:1.1}
+}
+@media (min-width:1024px) and (max-width:1300px) and (min-aspect-ratio:1/1){
+  #app{grid-template-columns:minmax(260px,26vw) minmax(0,1fr) minmax(220px,23vw)}
+  #stage{min-height:190px}
+  .colM{grid-template-rows:minmax(190px,.95fr) auto minmax(240px,1.1fr) minmax(160px,.8fr)}
+}
 </style>
+</head>
+<body>
 
 <div class="wrap" id="app">
   <header>
-    <h1>Digital Twin MPTCP</h1>
-    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS lewat dua link seluler, dibonding di edge <b>Jetson (AI/ML)</b>: controller LinUCB mengamati tiap SIM dan membagi beban secara live.</p>
+    <div class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h6l4 6-4 6H2" fill="none" stroke="var(--simba)" stroke-width="2.2"/><path d="M8 6h0l4 6h10" fill="none" stroke="var(--singtel)" stroke-width="2.2"/><path d="M8 18l4-6" fill="none" stroke="var(--singtel)" stroke-width="2.2"/></svg><h1>Bondline<span class="prod">Konsol Kembar</span></h1><span class="site">KAPAL GW-01 · RPi OMR → VPS SG</span><span class="ver">v3.0</span></div>
+    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS melalui dua link seluler, digabung di edge <b>Jetson (AI/ML)</b>: controller LinUCB mengamati tiap SIM dan membagi beban secara langsung.</p>
+    <span class="spacer"></span>
+    <span class="conn" id="conn" data-s="wait" role="status" aria-live="polite" title="Status feed dan diagnosis tersedia saat mode langsung terhubung."><i></i><span id="conntxt">Menghubungkan…</span></span>
+    <button id="themebtn" class="icon" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema (T)">☀</button>
   </header>
 
   <div class="colL">
   <div class="panel bar">
     <label for="preset">Data</label>
     <select id="preset"></select>
-    <span class="filebtn" role="button" tabindex="0">Load test results…<input id="file" type="file" accept=".gz,.tgz,.csv,.txt" multiple></span>
-    <button id="starttest" hidden>Start auto test (7 min)</button>
+    <span class="filebtn" role="button" tabindex="0">Muat hasil uji…<input id="file" type="file" accept=".gz,.tgz,.csv,.txt" multiple></span>
+    <button id="starttest" hidden>Mulai uji otomatis (7 mnt)</button>
     <span id="msg"></span>
     <span class="spacer"></span>
-    <button id="play" aria-label="Play or pause">▶ Play</button>
-    <span role="group" aria-label="Speed" id="speeds"></span>
+    <button id="play" aria-label="Putar atau jeda">▶ Putar</button>
+    <span role="group" aria-label="Kecepatan" id="speeds"></span>
     <span class="clock" id="clock">--:--:--</span>
   </div>
 
   <div class="panel video v-mon" id="videop">
     <div class="bar">
       <label>Kamera</label>
-      <span role="group" aria-label="Player" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
+      <span role="group" aria-label="Pemutar" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
       <button id="vreload">Muat ulang</button>
       <button id="vtoggle">Sembunyikan</button>
       <span class="spacer"></span>
@@ -287,12 +432,12 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 
   <div class="panel sched v-kpi" id="schedp" hidden>
     <div class="bar">
-      <label for="schedsel">Scheduler</label>
+      <label for="schedsel">Penjadwal</label>
       <select id="schedsel"></select>
-      <span class="chip" id="schedcur">active: –</span>
-      <button id="schedapply">Apply</button>
-      <button id="schedtest" class="primary">Apply + 7-min auto test</button>
-      <button id="scheddef">Back to default</button>
+      <span class="chip" id="schedcur">aktif: –</span>
+      <button id="schedapply">Terapkan</button>
+      <button id="schedtest" class="primary">Terapkan + uji otomatis 7 mnt</button>
+      <button id="scheddef">Kembali ke bawaan</button>
       <span id="schedmsg"></span>
     </div>
     <p class="desc" id="scheddesc"></p>
@@ -301,9 +446,9 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   <div class="panel sched v-mon" id="vpnp" hidden>
     <div class="bar">
       <label for="vpnsel">Transport</label>
-      <select id="vpnsel"></select>
+      <select id="vpnsel"><option value="">Memuat daftar transport…</option></select>
       <span class="chip" id="vpncur">–</span>
-      <button id="vpnapply" class="primary">Switch</button>
+      <button id="vpnapply" class="primary">Ganti</button>
       <span id="vpnmsg"></span>
     </div>
     <p class="desc" id="vpndesc"></p>
@@ -311,33 +456,33 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 
   <div class="panel sched v-mon" id="linkp" hidden>
     <div class="bar">
-      <label>Links</label>
-      <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Cut</button></span>
-      <span class="lk"><i style="background:var(--singtel)"></i>Singtel <button class="cut" id="cut2" data-dev="wan2">Cut</button></span>
-      <label for="cutsecs">auto-restore after</label>
-      <select id="cutsecs"><option value="60">1 min</option><option value="120" selected>2 min</option><option value="300">5 min</option><option value="600">10 min</option></select>
+      <label>Link</label>
+      <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Putus</button></span>
+      <span class="lk"><i style="background:var(--singtel)"></i>Singtel <button class="cut" id="cut2" data-dev="wan2">Putus</button></span>
+      <label for="cutsecs">pulih otomatis setelah</label>
+      <select id="cutsecs"><option value="60">1 mnt</option><option value="120" selected>2 mnt</option><option value="300">5 mnt</option><option value="600">10 mnt</option></select>
       <span class="spacer"></span>
-      <label>Primary path</label>
-      <span role="group" aria-label="Primary path" id="prio"><button data-m="auto">Both</button><button data-m="simba">Simba first</button><button data-m="singtel">Singtel first</button></span>
+      <label>Jalur utama</label>
+      <span role="group" aria-label="Jalur utama" id="prio"><button data-m="auto">Keduanya</button><button data-m="simba">Simba dulu</button><button data-m="singtel">Singtel dulu</button></span>
     </div>
-    <p class="desc"><span id="linkmsg"></span> <b>Cut</b> drops all traffic on that link except to its own router (like losing the cellular signal); it restores itself after the chosen time, and only one link can be cut at a time so REDLAB keeps its SSH access. <b>Primary path</b> sets the MPTCP backup flag: “Singtel first” marks Simba as backup, so traffic moves to Singtel and Simba is only used if Singtel fails. Takes effect without restarting the tunnel.</p>
+    <p class="desc"><span id="linkmsg"></span> Tombol <b>Putus</b> menghentikan trafik pada link tersebut (seperti kehilangan sinyal seluler); link pulih otomatis setelah waktu yang dipilih. Hanya satu link yang dapat diputus agar REDLAB tetap dapat mengakses RPi. <b>Jalur utama</b> mengatur penanda cadangan MPTCP tanpa memulai ulang tunnel.</p>
   </div>
 
   <div class="panel jet v-kpi" id="jetp" hidden>
     <div class="jhead"><h2>Agregasi bonding · otak Jetson</h2><span class="jchips"><span class="chip aistat" id="jai">AI –</span><span class="chip" id="jwcur">w=0.50</span></span></div>
     <div class="jstat">
-      <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Total throughput</div></div>
+      <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Laju data total</div></div>
       <div class="jk eff"><div class="jkv" id="keff">–</div><div class="jkl">Efisiensi agregasi</div></div>
       <div class="jk"><div class="jkv" id="ksig">–</div><div class="jkl">Kapasitas 2 SIM</div></div>
     </div>
     <div class="splitbar" aria-hidden="true"><span id="sbar1" style="width:50%"></span><span id="sbar2" style="width:50%"></span></div>
     <div class="splitlab"><span class="s1" id="slab1">Simba 50%</span><span class="s2" id="slab2">Singtel 50%</span></div>
     <div class="jspark">
-      <div class="cap"><span><b>Keputusan split AI</b> (w) · live</span><span>atas = Simba · bawah = Singtel</span></div>
+      <div class="cap"><span><b>Keputusan pembagian AI</b> (w) · langsung</span><span>atas = Simba · bawah = Singtel</span></div>
       <canvas id="jwspark" height="46" aria-label="Riwayat keputusan split w dari controller AI Jetson"></canvas>
     </div>
     <div class="jrow">
-      <span role="group" aria-label="Split" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Seimbang</button><button data-w="0.0">Singtel</button></span>
+      <span role="group" aria-label="Pembagian beban" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Seimbang</button><button data-w="0.0">Singtel</button></span>
       <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Pembagian beban ke Simba">
       <button id="jload" class="primary">Uji beban 30 dtk</button>
     </div>
@@ -348,42 +493,44 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
 
   <div class="colM">
   <div class="panel v-mon" id="stage">
-    <canvas id="diag" width="1160" height="460" aria-label="Flow diagram from RPi to VPS over two links"></canvas>
-    <span class="status st-ok" id="status">Normal</span>
+    <canvas id="diag" width="1160" height="460" aria-label="Diagram aliran dari RPi ke VPS melalui dua link"></canvas>
+    <span class="status st-fo" id="status">Menunggu data</span>
+    <div class="empty" id="empty"><div class="spin" aria-hidden="true"></div><b>Menunggu data live dari RPi…</b><span id="emptysub">Sampel 1 Hz diambil lewat SSH dari REDLAB</span></div>
   </div>
 
   <div class="readouts v-mon">
-    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--simba)"></span>Simba · RUTM30 (wan1)</div><div class="v" id="v1">0 <small>kbps</small></div><div class="chips" id="c1"></div></div>
-    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--singtel)"></span>Singtel · RUTM16 (wan2)</div><div class="v" id="v2">0 <small>kbps</small></div><div class="chips" id="c2"></div></div>
-    <div class="panel ro"><div class="k"><span class="sw" style="background:var(--ink)"></span>Total to VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
+    <div class="panel ro" style="--c:var(--simba)"><div class="k"><span class="sw" style="background:var(--simba)"></span>Simba · RUTM30 (wan1)</div><div class="v" id="v1">0 <small>kbps</small></div><div class="chips" id="c1"></div></div>
+    <div class="panel ro" style="--c:var(--singtel)"><div class="k"><span class="sw" style="background:var(--singtel)"></span>Singtel · RUTM16 (wan2)</div><div class="v" id="v2">0 <small>kbps</small></div><div class="chips" id="c2"></div></div>
+    <div class="panel ro" style="--c:var(--accent)">    <div class="k"><span class="sw" style="background:var(--ink)"></span>Total ke VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
   </div>
 
   <div class="panel tlwrap v-kpi">
-    <canvas id="tl" width="1160" height="190" aria-label="Upload per link over time; click to jump"></canvas>
+    <canvas id="tl" width="1160" height="190" aria-label="Unggahan per link dari waktu ke waktu"></canvas>
+    <div class="tip" id="tltip" hidden></div>
     <div class="legend">
-      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (bonding)</span>
-      <span><i class="lg-line" style="background:var(--simba)"></i>Simba kbps</span>
-      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel kbps</span>
-      <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i>stall (total &lt; 500 kbps)</span>
-      <span><i class="lg-box" style="background:var(--grid)"></i>link cut</span>
-      <span id="tlhint">Click or drag the chart to jump in time</span>
+      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (agregat)</span>
+      <span><i class="lg-line" style="background:var(--simba)"></i>Simba · kbps</span>
+      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel · kbps</span>
+      <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i><span id="stalllbl">macet</span></span>
+      <span><i class="lg-box" style="background:var(--grid)"></i>link terputus</span>
+      <span id="tlhint">Seret grafik untuk menelusuri waktu</span>
     </div>
     <div class="tlctl" id="tlctl" hidden>
-      <span role="group" aria-label="Time window" id="tlspan"><button data-s="120">2 min</button><button data-s="300" class="on">5 min</button><button data-s="900">15 min</button><button data-s="3600">1 h</button><button data-s="0">All</button></span>
-      <input type="range" id="tlpos" min="0" max="1000" value="1000" aria-label="Scroll the timeline">
+      <span role="group" aria-label="Rentang waktu" id="tlspan"><button data-s="120">2 mnt</button><button data-s="300" class="on">5 mnt</button><button data-s="900">15 mnt</button><button data-s="3600">1 jam</button><button data-s="0">Semua</button></span>
+      <input type="range" id="tlpos" min="0" max="1000" value="1000" aria-label="Gulir lini masa">
       <span class="pos" id="tlposlbl"></span>
-      <button id="tlfollow" class="on">● Follow live</button>
+      <button id="tlfollow" class="on">● Ikuti langsung</button>
     </div>
   </div>
 
   <div class="panel latwrap v-kpi">
-    <h2>Latency · RTT to VPS per SIM</h2>
-    <canvas id="lat" width="1160" height="150" aria-label="Round-trip latency per SIM over time"></canvas>
+    <h2>Latensi · RTT ke VPS per SIM</h2>
+    <canvas id="lat" width="1160" height="150" aria-label="Latensi pulang-pergi tiap SIM dari waktu ke waktu"></canvas>
     <div class="legend">
-      <span><i class="lg-line" style="background:var(--simba)"></i>Simba RTT</span>
-      <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel RTT</span>
-      <span><i class="lg-line" style="background:var(--ink)"></i>Tunnel RTT</span>
-      <span class="note">ms · lower is better · gap = packet lost</span>
+      <span><i class="lg-line" style="background:var(--simba)"></i>RTT Simba</span>
+      <span><i class="lg-line" style="background:var(--singtel)"></i>RTT Singtel</span>
+      <span><i class="lg-line" style="background:var(--ink)"></i>RTT tunnel</span>
+      <span class="note">ms · lebih rendah lebih baik · jeda = paket hilang</span>
     </div>
   </div>
 
@@ -393,7 +540,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   <div class="panel aiwork" id="aiwork" hidden>
     <div class="jhead"><h2>Cara kerja otak AI · LinUCB</h2><span class="chip" id="aists">–</span></div>
     <div class="aistep"><div class="num">1</div><div>
-      <div class="st">Amati kondisi tiap SIM (live)</div>
+      <div class="st">Amati kondisi tiap SIM (langsung)</div>
       <div class="aiobs"><span class="s1">Simba</span><span class="v" id="ai_s1">RTT – · cap –</span></div>
       <div class="aiobs"><span class="s2">Singtel</span><span class="v" id="ai_s2">RTT – · cap –</span></div>
     </div></div>
@@ -402,7 +549,7 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
       <div class="cand" id="ai_cand"></div>
     </div></div>
     <div class="aistep"><div class="num">3</div><div>
-      <div class="st">Putuskan &amp; terapkan</div>
+      <div class="st">Tentukan &amp; terapkan</div>
       <div class="aidecide"><span class="wbig" id="ai_w">w=–</span><span class="nsub" id="ai_n"></span></div>
       <div class="aiwhy" id="ai_why"></div>
     </div></div>
@@ -410,25 +557,43 @@ button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink
   </div>
 
   <div class="cols v-mon">
-    <div class="panel"><h2>Events</h2><ol class="ev" id="events"></ol><p class="note" id="pnote"></p></div>
-    <div class="panel"><h2>Summary per event</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"></tbody></table></div>
-      <p class="note">“Stall” = consecutive seconds with total upload &lt; 500 kbps after the event. The RPi queue is a model estimate (constant camera rate minus what was sent), not a measurement.</p></div>
+    <div class="panel"><h2>Kejadian</h2><ol class="ev" id="events"><li class="emptyrow">Belum ada kejadian. Pemutusan link dan langkah uji otomatis akan muncul di sini.</li></ol><p class="note" id="pnote"></p></div>
+    <div class="panel"><h2>Ringkasan per kejadian</h2><div class="tbl"><table><thead><tr><th>Kejadian</th><th>Waktu</th><th>Macet terlama</th><th>Terdeteksi OMR</th></tr></thead><tbody id="sum"><tr><td colspan="4" class="emptyrow">Belum ada kejadian untuk diringkas.</td></tr></tbody></table></div>
+      <p class="note">“Macet” = detik berurutan saat unggahan total di bawah ambang setelah kejadian. Antrean RPi adalah perkiraan model (bitrate kamera konstan dikurangi data terkirim), bukan hasil pengukuran.</p></div>
   </div>
 
   <div class="panel cmp v-kpi" id="cmpp" hidden>
-    <div class="hd"><h2>Scheduler comparison</h2><span class="spacer"></span><button id="cmpcsv">Export CSV</button><button id="cmpclear">Clear table</button></div>
-    <div class="tbl"><table><thead><tr><th>Scheduler</th><th>Start (UTC)</th><th>Duration</th><th>Avg total</th><th>Simba / Singtel</th><th>Stall seconds</th><th>Longest stall</th><th>Tunnel 2 subflows</th><th>Link cuts</th></tr></thead><tbody id="cmpb"></tbody></table></div>
-    <p class="note">One row = one scheduler period since it was applied. The <b>first 25 seconds</b> after a switch (OpenVPN tunnel restart) are not counted. Green = best in its column. The table is kept in this browser, so it survives a page reload. Compare rows with the same conditions (“Link cuts” column).</p>
+    <div class="hd"><h2>Perbandingan penjadwal</h2><span class="spacer"></span><button id="cmpcsv">Ekspor CSV</button><button id="cmpclear">Hapus tabel</button></div>
+    <div class="tbl"><table><thead><tr><th>Penjadwal</th><th>Mulai (UTC)</th><th>Durasi</th><th>Rata-rata TP (kbps)</th><th>Simba / Singtel</th><th>Detik macet</th><th>Macet terlama</th><th>2 sub-alur tunnel</th><th>Link terputus</th></tr></thead><tbody id="cmpb"></tbody></table></div>
+    <p class="note">Satu baris = satu periode penjadwal sejak diterapkan. <b>25 detik pertama</b> setelah pergantian (tunnel OpenVPN dimulai ulang) tidak dihitung. Hijau = nilai terbaik di kolomnya. Tabel tersimpan di peramban dan tetap ada setelah halaman dimuat ulang. Bandingkan baris dengan kondisi sama (kolom “Link terputus”).</p>
   </div>
   </div><!--/colR-->
+  <footer class="sbar" aria-label="Status bar">
+    <span><i class="led" id="sb_led"></i><b>DATA</b> <em id="sb_feed">–</em></span>
+    <span><b>JADWAL</b> <em id="sb_sched">–</em></span>
+    <span><b>TRANSPORT</b> <em id="sb_vpn">–</em></span>
+    <span><b>AI</b> <em id="sb_ai">–</em></span>
+    <span class="spacer"></span>
+    <span><b>AMBANG MACET</b> <em id="sb_thr">–</em></span>
+    <span><b>UTC</b> <em id="sb_utc">–</em></span>
+  </footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script>
 const PRESETS = [];   // old test history not shown; page opens straight in LIVE
-const STALL = 500;
+let STALL = 5;   // 25% of observed positive traffic, capped at 500 kbps.
+function setBase(v){ D.base=Math.max(0,Number(v)||0); STALL=D.base?Math.max(5,Math.min(500,Math.round(D.base*0.25))):5; const l=document.getElementById('stalllbl'); if(l) l.textContent='macet (< '+STALL+' kbps)'; }
+function niceMax(v){ const p=Math.pow(10,Math.floor(Math.log10(v))), m=v/p; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; }
+const kfmt=v=>Math.round(v)+' kbps';
 const $ = id => document.getElementById(id);
-const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CSSV={};   // cached CSS custom properties (reset on resize / theme change)
+const css = n => CSSV[n] ?? (CSSV[n]=getComputedStyle(document.documentElement).getPropertyValue(n).trim());
+function cssReset(){ for(const k in CSSV) delete CSSV[k]; }
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setHTML(el,h){ if(el._h!==h){ el._h=h; el.innerHTML=h; } }   // skip DOM writes when nothing changed
+const UI={has:null, slow:0};
+function setConn(s,t){ const c=$('conn'); if(!c) return; if(c.dataset.s!==s) c.dataset.s=s; const x=$('conntxt'); if(x.textContent!==t) x.textContent=t; }
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let D = null;           // {name, start, rows:[[t,a,b,s1,s2]], events:[{t,label,kind,link}], note}
@@ -442,13 +607,14 @@ function rowAt(t){ if(!D||!D.rows.length) return null; const r=D.rows; let lo=0,
 function phys(t, link){ // physically cut? auto-test flag in live rows, else events
   const rw=rowAt(t); if(rw && rw.length>=9) return rw[6+link]===1;
   let down=false; for(const e of D.events){ if(e.link!==link) continue; if(e.t>t) break; down = e.kind==='down'; } return down; }
-function rate(){ const v=D.rows.map(r=>r[1]+r[2]).filter(x=>x>STALL).sort((a,b)=>a-b); return v.length? v[v.length>>1] : 2000; }
+function rate(){ const v=D.rows.slice(-300).map(r=>r[1]+r[2]).filter(x=>x>0).sort((a,b)=>a-b); return v.length? v[v.length>>1] : 0; }
+function isStalled(total){ return D.base>0 && total<STALL; }
 function summary(){
   const ev=[...D.events].sort((a,b)=>a.t-b.t), out=[];
   ev.forEach((e,k)=>{ const end=Math.min(k<ev.length-1? ev[k+1].t-3 : e.t+150, e.t+150);
     let run=0,mx=0,det=null;
     for(const r of D.rows){ if(r[0]<e.t-3||r[0]>=end) continue;
-      if(r[1]+r[2]<STALL){run++; mx=Math.max(mx,run);} else run=0;
+      if(isStalled(r[1]+r[2])){run++; mx=Math.max(mx,run);} else run=0;
       const st=r[2+e.link]; if(det===null && r[0]>=e.t && ((e.kind==='down'&&st===0)||(e.kind==='up'&&st===1))) det=r[0]-e.t; }
     out.push({e,mx,det}); });
   return out;
@@ -456,25 +622,17 @@ function summary(){
 
 /* ---------- UI build ---------- */
 function setData(d){
-  D=d; d.events.sort((a,b)=>a.t-b.t); cur=0; parts=[]; queue=0; lastSimT=0; D.base=d.rows.length?rate():2000; if(!d.rows.length) return;
-  const ol=$('events'); ol.innerHTML='';
-  d.events.forEach((e,i)=>{ const li=document.createElement('li'); const b=document.createElement('button');
-    b.innerHTML=`<span class="t">+${fmt(e.t)}</span><span>${e.label}</span>`; b.onclick=()=>{cur=Math.max(0,e.t-6); draw(true);};
-    b.dataset.t=e.t; li.appendChild(b); ol.appendChild(li); });
-  $('pnote').textContent = d.note || '';
-  const tb=$('sum'); tb.innerHTML='';
-  summary().forEach(s=>{ const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${s.e.label}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} s</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'down':'up')+' +'+s.det+' s'}</td>`; tb.appendChild(tr); });
+  D=d; d.events.sort((a,b)=>a.t-b.t); cur=0; parts=[]; queue=0; lastSimT=0; setBase(d.rows.length?rate():0); refreshLists(); if(!d.rows.length) return;
   draw(true);
 }
 function fmt(s){ s=Math.max(0,Math.round(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 
 PRESETS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; $('preset').appendChild(o); });
-{ const o=document.createElement('option'); o.value='live'; o.textContent='● LIVE · RPi OMR now'; $('preset').prepend(o); }
+{ const o=document.createElement('option'); o.value='live'; o.textContent='● LANGSUNG · RPi OMR'; $('preset').prepend(o); }
 $('preset').onchange=e=>{ stopLive(); if(e.target.value==='live') startLive(); else setData(JSON.parse(JSON.stringify(PRESETS[e.target.value]))); };
 [1,4,10].forEach(s=>{ const b=document.createElement('button'); b.textContent=s+'×'; b.className=s===speed?'on':''; b.onclick=()=>{speed=s; [...$('speeds').children].forEach(x=>x.className=x===b?'on':'');}; $('speeds').appendChild(b); });
-$('play').onclick=()=>{ playing=!playing; if(playing && cur>=D.rows[D.rows.length-1][0]) cur=0; $('play').textContent=playing?'❚❚ Pause':'▶ Play'; };
-$('play').textContent=playing?'❚❚ Pause':'▶ Play';
+$('play').onclick=()=>{ playing=!playing; if(playing && cur>=D.rows[D.rows.length-1][0]) cur=0; $('play').textContent=playing?'❚❚ Jeda':'▶ Putar'; };
+$('play').textContent=playing?'❚❚ Jeda':'▶ Putar';
 
 /* ---------- file loading (fotest_*.tar.gz, traffic.csv, marks.csv) ---------- */
 function untar(u8){ const files={}; let o=0; const td=new TextDecoder();
@@ -492,7 +650,7 @@ function parseTraffic(txt){
   const start=ep(raw[0]);
   return {start, rows:raw.map(r=>[ep(r)-start,+r[iA],+r[iB],r[iSA]==='up'?1:0,r[iSB]==='up'?1:0])};
 }
-function labelEn(l){ return l.replace(/\s*\[auto:[^\]]*\]/,'').replace(/\b(CABUT|DOWN)\b/i,'Cut').replace(/\b(COLOK|UP)\b/i,'Restore').trim()+(l.includes('[auto:')?' (auto)':''); }
+function labelEn(l){ return l.replace(/\s*\[auto:[^\]]*\]/,'').replace(/\b(CABUT|DOWN)\b/i,'Putus').replace(/\b(COLOK|UP)\b/i,'Pulih').trim()+(l.includes('[auto:')?' (otomatis)':''); }
 function eventsFrom(f, start){
   const plan=(f['plan.txt']||'').split(/\r?\n/).filter(Boolean).map(l=>{const [o,...lab]=l.split('|'); return {t:+o,label:lab.join('|')};});
   const marks=(f['marks.csv']||'').split(/\r?\n/).filter(Boolean).map(l=>+l.split(',')[0]-start);
@@ -513,8 +671,8 @@ async function loadFiles(list){
     const name=list[0].name.replace(/\.(tar\.gz|tgz|csv)$/,'');
     const d={name, note:'Loaded from '+list[0].name, start, rows:tr.rows, events:eventsFrom(f,start)};
     const o=document.createElement('option'); o.value=PRESETS.length; o.textContent=name; PRESETS.push(d); $('preset').appendChild(o); $('preset').value=o.value;
-    setData(JSON.parse(JSON.stringify(d))); $('msg').textContent=`Loaded: ${tr.rows.length} s, ${d.events.length} events.`;
-  }catch(err){ $('msg').textContent='Failed to load: '+err.message; }
+    setData(JSON.parse(JSON.stringify(d))); $('msg').textContent=`Dimuat: ${tr.rows.length} dtk, ${d.events.length} kejadian.`;
+  }catch(err){ $('msg').textContent='Gagal memuat: '+err.message; }
 }
 $('file').onchange=e=>loadFiles([...e.target.files]);
 document.querySelector('.filebtn').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('file').click(); } };
@@ -543,7 +701,8 @@ function strokePath(path){ cx.beginPath(); cx.moveTo(path[0].x,path[0].y); cx.qu
 function node(p,title,subtitle,opt={}){
   const fs=G.narrow?11:13, pw=G.narrow?78:132, ph=G.narrow?40:50;
   cx.fillStyle=css('--surface'); cx.strokeStyle=opt.stroke||css('--line'); cx.lineWidth=opt.stroke?2:1.2;
-  cx.beginPath(); cx.roundRect(p.x-pw/2,p.y-ph/2,pw,ph,8); cx.fill(); cx.stroke();
+  cx.save(); cx.shadowColor='rgba(0,0,0,.28)'; cx.shadowBlur=G.narrow?8:14; cx.shadowOffsetY=3;
+  cx.beginPath(); cx.roundRect(p.x-pw/2,p.y-ph/2,pw,ph,9); cx.fill(); cx.restore(); cx.stroke();
   cx.fillStyle=css('--ink'); cx.font=`600 ${fs}px ${css('--sans')}`; cx.textAlign='center'; cx.textBaseline='middle';
   cx.fillText(title,p.x,p.y-(subtitle?7:0));
   if(subtitle){ cx.fillStyle=css('--muted'); cx.font=`400 ${fs-2}px ${css('--sans')}`; cx.fillText(subtitle,p.x,p.y+9); }
@@ -570,17 +729,17 @@ function drawDiagram(row, dtReal){
   for(const q of parts){ let p,col;
     if(G.narrow&&q.lane>1) continue; if(q.lane===0){p=onPath(G.path1,q.t);col=c1;} else if(q.lane===1){p=onPath(G.path2,q.t);col=c2;}
     else if(q.lane===2){p=line(G.cam,G.rpi,q.t);col=mut;} else {p=line(G.vps,G.view,q.t);col=ink;}
-    cx.fillStyle=col; cx.beginPath(); cx.arc(p.x,p.y,G.narrow?2.4:3.2,0,7); cx.fill(); }
+    const rad=G.narrow?2.4:3.2; cx.fillStyle=col; cx.globalAlpha=.22; cx.beginPath(); cx.arc(p.x,p.y,rad*2.3,0,7); cx.fill(); cx.globalAlpha=1; cx.beginPath(); cx.arc(p.x,p.y,rad,0,7); cx.fill(); }
   // router badges + cut marks
   for(const [p,col,cut,kb,name] of pipes){ const m=p[2];
     node(m, name.split(' · ')[1], name.split(' · ')[0]+' · '+Math.round(kb)+' kbps',{stroke:cut?stall:col});
     if(cut){ cx.strokeStyle=stall; cx.lineWidth=3; const s=G.narrow?7:9, x=m.x+(G.narrow?44:72), y=m.y; cx.beginPath(); cx.moveTo(x-s,y-s); cx.lineTo(x+s,y+s); cx.moveTo(x+s,y-s); cx.lineTo(x-s,y+s); cx.stroke();
       cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='left'; cx.fillText('DICABUT',x+s+4,y); }
   }
-  if(!G.narrow){ node(G.cam,'Camera','stream'); node(G.view,'Viewer','HLS/RTSP'); } node(G.rpi,'RPi OMR',G.narrow?'+ camera':'MPTCP'); node(G.vps,'VPS DO',G.narrow?'+ viewer':'MediaMTX');
+  if(!G.narrow){ node(G.cam,'Kamera','aliran'); node(G.view,'Pemirsa','HLS/RTSP'); } node(G.rpi,'RPi OMR',G.narrow?'+ kamera':'MPTCP'); node(G.vps,'VPS DO',G.narrow?'+ pemirsa':'MediaMTX');
   // queue (model)
   if(queue>3000){ const kb=Math.round(queue/8); cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='center';
-    cx.fillText(`queue ≈ ${kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB'}`, G.rpi.x, G.rpi.y+(G.narrow?34:44)); }
+    cx.fillText(`antrean ≈ ${kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB'}`, G.rpi.x, G.rpi.y+(G.narrow?34:44)); }
   // share labels on pipes
   cx.font=`500 ${G.narrow?10:12}px ${css('--mono')}`; cx.textAlign='center'; cx.fillStyle=mut;
   const sh1= tot>0? Math.round(a/tot*100):0;
@@ -591,7 +750,7 @@ function drawDiagram(row, dtReal){
 const tv=$('tl'), tx=tv.getContext('2d'); let TL={};
 function tlLayout(){ const w=tv.clientWidth,h=190,dpr=devicePixelRatio||1; tv.width=w*dpr; tv.height=h*dpr; tx.setTransform(dpr,0,0,dpr,0,0); TL={w,h,l:44,r:10,t:10,b:24}; }
 function drawTL(){
-  const {w,h,l,r,t,b}=TL, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2), ymax=Math.max(4000,...rows.map(x=>x[1]+x[2]))*1.05;
+  const {w,h,l,r,t,b}=TL, [t0,T]=viewRange(), rows=D.rows.filter(x=>x[0]>=t0-2&&x[0]<=T+2), ymax=niceMax(Math.max(200,...rows.map(x=>x[1]+x[2]))*1.12);
   const X=s=>l+(w-l-r)*(Math.min(T,Math.max(t0,s))-t0)/(T-t0), Y=v=>t+(h-t-b)*(1-v/ymax);
   tx.clearRect(0,0,w,h);
   // cut spans
@@ -600,18 +759,23 @@ function drawTL(){
     if(s!==null){ tx.fillStyle=css('--grid'); tx.fillRect(X(s),t,X(T)-X(s),h-t-b); } }
   // stall spans
   tx.fillStyle=css('--stall'); tx.globalAlpha=.2; let s0=null;
-  rows.forEach((x,i)=>{ const st=x[1]+x[2]<STALL; if(st&&s0===null) s0=x[0]; if((!st||i===rows.length-1)&&s0!==null){ tx.fillRect(X(s0),t,Math.max(2,X(x[0])-X(s0)),h-t-b); s0=null; } });
+  rows.forEach((x,i)=>{ const st=isStalled(x[1]+x[2]); if(st&&s0===null) s0=x[0]; if((!st||i===rows.length-1)&&s0!==null){ tx.fillRect(X(s0),t,Math.max(2,X(x[0])-X(s0)),h-t-b); s0=null; } });
   tx.globalAlpha=1;
   // grid + axis
   tx.strokeStyle=css('--grid'); tx.lineWidth=1; tx.fillStyle=css('--muted'); tx.font=`11px ${css('--mono')}`; tx.textAlign='right'; tx.textBaseline='middle';
-  const step=ymax>6000?2000:1000; for(let v=0;v<=ymax;v+=step){ tx.beginPath(); tx.moveTo(l,Y(v)); tx.lineTo(w-r,Y(v)); tx.stroke(); tx.fillText((v/1000)+'M',l-6,Y(v)); }
+  const step=ymax/4; for(let v=0;v<=ymax+1;v+=step){ tx.beginPath(); tx.moveTo(l,Y(v)); tx.lineTo(w-r,Y(v)); tx.stroke(); tx.fillText(v>=1000?(v/1000).toFixed(v%1000?1:0)+'M':Math.round(v)+'k',l-6,Y(v)); }
   tx.textAlign='center'; tx.textBaseline='top'; const tstep=[10,15,30,60,120,300,600,900,1800,3600,7200].find(s=>(T-t0)/s<=Math.max(3,w/110))||7200;
   for(let s=Math.ceil(t0/tstep)*tstep;s<=T;s+=tstep) tx.fillText(D.live?hms(D.start+s):fmt(s),X(s),h-b+6);
   // auto-cut spans from live rows
   if(D.live){ for(const k of [7,8]){ tx.fillStyle=css('--grid'); rows.forEach((x,i)=>{ if(x[k]===1&&i){ tx.fillRect(X(rows[i-1][0]),t,Math.max(1,X(x[0])-X(rows[i-1][0])),h-t-b); } }); } }
   // lines: per-link, then total (bonding) on top
   [[1,css('--simba')],[2,css('--singtel')]].forEach(([i,col])=>{ tx.strokeStyle=col; tx.lineWidth=1.4; tx.globalAlpha=.9; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[i]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke(); });
-  tx.globalAlpha=1; tx.strokeStyle=css('--ink'); tx.lineWidth=2.2; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[1]+x[2]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke();
+  tx.globalAlpha=1;
+  if(rows.length>1){ // soft area under the bonded total
+    const g=tx.createLinearGradient(0,t,0,h-b); g.addColorStop(0,css('--accent')||css('--ink')); g.addColorStop(1,'rgba(0,0,0,0)');
+    tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[1]+x[2]); k?tx.lineTo(px,py):tx.moveTo(px,py); });
+    tx.lineTo(X(rows[rows.length-1][0]),h-b); tx.lineTo(X(rows[0][0]),h-b); tx.closePath(); tx.globalAlpha=.18; tx.fillStyle=g; tx.fill(); tx.globalAlpha=1; }
+  tx.strokeStyle=css('--ink'); tx.lineWidth=2.2; tx.lineJoin='round'; tx.beginPath(); rows.forEach((x,k)=>{ const px=X(x[0]),py=Y(x[1]+x[2]); k?tx.lineTo(px,py):tx.moveTo(px,py); }); tx.stroke();
   // events
   tx.setLineDash([3,3]); tx.strokeStyle=css('--muted'); D.events.forEach(e=>{ if(e.t<t0||e.t>T) return; tx.beginPath(); tx.moveTo(X(e.t),t); tx.lineTo(X(e.t),h-b); tx.stroke(); }); tx.setLineDash([]);
   // scheduler changes (live)
@@ -623,6 +787,10 @@ function drawTL(){
       tx.fillStyle=css('--surface'); tx.fillRect(lx,t+1,wl,15); tx.fillStyle=css('--ink'); tx.fillText(lb,lx+4,t+3); }); }
   // playhead
   if(cur>=t0&&cur<=T){ tx.strokeStyle=css('--ink'); tx.lineWidth=2; tx.beginPath(); tx.moveTo(X(cur),t); tx.lineTo(X(cur),h-b); tx.stroke(); }
+  // hover crosshair + value dots (tooltip text is in tlTip)
+  if(TL.hx!=null && TL.hx>=l && TL.hx<=w-r){ const hr=rowAt(t0+(TL.hx-l)/(w-l-r)*(T-t0));
+    if(hr){ const px=X(hr[0]); tx.strokeStyle=css('--muted'); tx.lineWidth=1; tx.setLineDash([2,3]); tx.beginPath(); tx.moveTo(px,t); tx.lineTo(px,h-b); tx.stroke(); tx.setLineDash([]);
+      [[hr[1],css('--simba')],[hr[2],css('--singtel')],[hr[1]+hr[2],css('--ink')]].forEach(([v,col])=>{ tx.fillStyle=css('--surface'); tx.beginPath(); tx.arc(px,Y(v),4.5,0,7); tx.fill(); tx.fillStyle=col; tx.beginPath(); tx.arc(px,Y(v),3,0,7); tx.fill(); }); } }
   TL.X=X; TL.T=T; TL.t0=t0; syncSlider(t0,T);
 }
 /* ---------- latency (RTT to VPS per SIM) ---------- */
@@ -639,7 +807,7 @@ function drawLat(){
   lc.strokeStyle=css('--grid'); lc.lineWidth=1; lc.fillStyle=css('--muted'); lc.font=`11px ${css('--mono')}`; lc.textAlign='right'; lc.textBaseline='middle';
   const step= ymax>400?100: ymax>150?50:25;
   for(let v=0;v<=ymax;v+=step){ lc.beginPath(); lc.moveTo(l,Y(v)); lc.lineTo(w-r,Y(v)); lc.stroke(); lc.fillText(v,l-6,Y(v)); }
-  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('waiting for latency samples…',w/2,h/2); return; }
+  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('menunggu sampel latensi…',w/2,h/2); return; }
   [[9,css('--simba'),1.5],[10,css('--singtel'),1.5],[11,css('--ink'),2]].forEach(([i,col,lw])=>{
     lc.strokeStyle=col; lc.lineWidth=lw; lc.beginPath(); let pen=false;
     rows.forEach(x=>{ const v=x[i]; if(v==null||v<0){ pen=false; return; } const px=X(x[0]),py=Y(v); pen?lc.lineTo(px,py):lc.moveTo(px,py); pen=true; }); lc.stroke(); });
@@ -662,49 +830,68 @@ let panFrom=null;
 function seek(ev){ const rc=tv.getBoundingClientRect(); const x=(ev.touches?ev.touches[0].clientX:ev.clientX)-rc.left;
   if(D.live){ if(!panFrom) return; const [a,z]=bounds(), span=TL.T-TL.t0, dt=-(x-panFrom.x)/(TL.w-TL.l-TL.r)*span;
     const end=Math.max(a+span, Math.min(z, panFrom.end+dt)); VIEW.follow= end>=z-0.5; VIEW.end=end; draw(false); return; } cur=Math.max(0,Math.min(TL.T,TL.t0+(x-TL.l)/(TL.w-TL.l-TL.r)*(TL.T-TL.t0))); queue=0; draw(true); }
-let drag=false; tv.addEventListener('pointerdown',e=>{drag=true; tv.setPointerCapture(e.pointerId); if(D&&D.live){ panFrom={x:e.clientX-tv.getBoundingClientRect().left, end:TL.T}; } seek(e);}); tv.addEventListener('pointermove',e=>{ if(drag) seek(e); }); tv.addEventListener('pointerup',()=>{drag=false; panFrom=null;});
+let drag=false; const hasData=()=>!!(D&&D.rows.length);
+tv.addEventListener('pointerdown',e=>{ if(!hasData()) return; drag=true; tv.setPointerCapture(e.pointerId); if(D.live){ panFrom={x:e.clientX-tv.getBoundingClientRect().left, end:TL.T}; } seek(e);});
+tv.addEventListener('pointermove',e=>{ TL.hx=e.clientX-tv.getBoundingClientRect().left; if(!hasData()) return; if(drag) seek(e); else drawTL(); tlTip(); });
+tv.addEventListener('pointerup',()=>{drag=false; panFrom=null;});
+tv.addEventListener('pointerleave',()=>{ TL.hx=null; tlTip(); if(hasData()) drawTL(); });
+function tlTip(){ const tip=$('tltip'); if(!tip) return;
+  if(TL.hx==null||!hasData()||TL.hx<TL.l||TL.hx>TL.w-TL.r){ tip.hidden=true; return; }
+  const x=rowAt(TL.t0+(TL.hx-TL.l)/(TL.w-TL.l-TL.r)*(TL.T-TL.t0)); if(!x){ tip.hidden=true; return; }
+  const bw=k=>k>=1000?(k/1000).toFixed(2)+' Mb/s':Math.round(k)+' kbps', ms=v=>v==null?null:(v<0?'lost':v+' ms');
+  const it=(col,lab,val)=>val==null?'':`<span><i style="background:${col}"></i>${lab}</span><em>${val}</em>`;
+  setHTML(tip,`<b>${D.live?hms(D.start+x[0])+' UTC':'+'+fmt(x[0])+' · '+hms(D.start+x[0])+' UTC'}</b>`+
+    it('var(--ink)','Total',bw(x[1]+x[2]))+it('var(--simba)','Simba',bw(x[1]))+it('var(--singtel)','Singtel',bw(x[2]))+
+    (x.length>9? it('var(--simba)','RTT Simba',ms(x[9]))+it('var(--singtel)','RTT Singtel',ms(x[10]))+it('var(--ink)','RTT tunnel',ms(x[11])) : '')+
+    (isStalled(x[1]+x[2])?'<span style="color:var(--stall)">● macet</span><em></em>':''));
+  tip.hidden=false; const tw=tip.offsetWidth; let left=tv.offsetLeft+TL.hx+14; if(TL.hx+14+tw>TL.w) left=tv.offsetLeft+TL.hx-14-tw;
+  tip.style.left=Math.max(4,left)+'px'; tip.style.top=(tv.offsetTop+8)+'px'; }
 
 /* ---------- readouts ---------- */
-function chips(el,list){ el.innerHTML=list.map(([t,c])=>`<span class="chip ${c||''}">${t}</span>`).join(''); }
+function chips(el,list){ setHTML(el, list.map(([t,c])=>`<span class="chip ${c||''}">${esc(t)}</span>`).join('')); }
 function readouts(row){
   const a=row[1], b=row[2], tot=a+b;
   const bw=k=> k>=10000 ? `${(k/1000).toFixed(1)} <small>Mbit/s</small>` : `${k} <small>kbps</small>`;
-  $('v1').innerHTML=bw(a); $('v2').innerHTML=bw(b); $('v3').innerHTML=bw(tot);
+  setHTML($('v1'),bw(a)); setHTML($('v2'),bw(b)); setHTML($('v3'),bw(tot));
   jetKPI(a,b);
   const c1=phys(cur,1), c2=phys(cur,2);
-  const tun=row.length>=7, t1=tun?[['OpenVPN tunnel: '+(row[5]?'has subflow':'NO subflow'),row[5]?'ok':'bad']]:[], t2=tun?[['OpenVPN tunnel: '+(row[6]?'has subflow':'NO subflow'),row[6]?'ok':'bad']]:[];
-  const rttc=v=>(v==null)?null:(v<0?['RTT: no reply','bad']:['RTT '+v+' ms']);
+  const tun=row.length>=7, t1=tun?[['Sub-alur '+(row[5]?'ada':'hilang'),row[5]?'ok':'bad']]:[], t2=tun?[['Sub-alur '+(row[6]?'ada':'hilang'),row[6]?'ok':'bad']]:[];
+  const rttc=v=>(v==null)?null:(v<0?['RTT hilang','bad']:['RTT '+v+' ms']);
   const q1=rttc(row[9]), q2=rttc(row[10]), qt=rttc(row[11]);
-  chips($('c1'),[[c1?'cable/signal cut':'connected',c1?'bad':'ok'],['status OMR: '+(row[3]?'up':'down'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'% of traffic'],...(q1?[q1]:[]),...t1]);
-  chips($('c2'),[[c2?'cable/signal cut':'connected',c2?'bad':'ok'],['status OMR: '+(row[4]?'up':'down'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'% of traffic'],...(q2?[q2]:[]),...t2]);
-  const stalled=tot<STALL;
+  chips($('c1'),[[c1?'link putus':'link aktif',c1?'bad':'ok'],['OMR '+(row[3]?'aktif':'mati'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'%'],...(q1?[q1]:[]),...t1]);
+  chips($('c2'),[[c2?'link putus':'link aktif',c2?'bad':'ok'],['OMR '+(row[4]?'aktif':'mati'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'%'],...(q2?[q2]:[]),...t2]);
+  const stalled=isStalled(tot);
   const sc = D.live && SC.log.length ? schedAt(D.start+row[0]).name : null;
-  chips($('c3'),[[stalled?'STALLED':'flowing',stalled?'bad':'ok'],['camera rate ≈ '+D.base+' kbps'],...(qt?[qt]:[]),...(sc?[['scheduler: '+sc]]:[])]);
+  chips($('c3'),[[D.base<=0?'Aliran belum aktif':stalled?'MACET':'Mengalir',stalled?'bad':D.base>0?'ok':''],['dasar '+Math.round(D.base)+' kbps'],...(qt?[qt]:[]),...(sc?[['jadwal: '+sc]]:[])]);
   const st=$('status');
-  if(stalled){ st.textContent='Stalled · stream stopped'; st.className='status st-stall'; }
-  else if(c1||c2){ st.textContent='Failover · 1 link'; st.className='status st-fo'; }
-  else { st.textContent='Normal · 2 links'; st.className='status st-ok'; }
-  $('clock').textContent= D.live ? `● LIVE ${hms(D.start+cur)} UTC` : `${hms(D.start+cur)} UTC  ·  +${fmt(cur)}`;
+  if(D.base<=0){ st.textContent='Aliran belum aktif'; st.className='status st-fo'; }
+  else if(stalled){ st.textContent='Macet · aliran berhenti'; st.className='status st-stall'; }
+  else if(c1||c2){ st.textContent='Pengalihan · 1 link'; st.className='status st-fo'; }
+  else { st.textContent='Normal · 2 link'; st.className='status st-ok'; }
+  const latest=D.rows.length?D.rows[D.rows.length-1][0]:cur;
+  $('clock').textContent= D.live ? `● LIVE ${hms(D.start+latest)} UTC` : `${hms(D.start+cur)} UTC  ·  +${fmt(cur)}`;
   document.querySelectorAll('#events button').forEach(bn=>{ const t=+bn.dataset.t; bn.classList.toggle('cur', cur>=t && cur<t+20); });
 }
 
 
 /* ---------- live (server MCP lokal host:omr-twin di aplikasi Claude desktop) ---------- */
 const HOST='host:omr-twin';
-let LV={on:false, timer:null, since:0, mcp:null, mode:null, busy:false, fails:0, testRunning:false};
+let LV={on:false, timer:null, since:0, mcp:null, mode:null, busy:false, fails:0, testRunning:false, age:null, clockSkew:null, sshMs:null};
 async function fetchLive(since){
-  if(LV.mode==='http'){ const r=await fetch('api/live?since='+since,{cache:'no-store'}); if(!r.ok) throw {code:'tool_error',message:'HTTP '+r.status+' '+(await r.text()).slice(0,120)}; return await r.json(); }
-  const r=await LV.mcp.callTool(HOST,'omr_live',{since},{cache:false}); return r.payload||{};
+  const started=performance.now();
+  if(LV.mode==='http'){ const r=await fetch('api/live?since='+since,{cache:'no-store'}); if(!r.ok) throw {code:'tool_error',message:'HTTP '+r.status+' '+(await r.text()).slice(0,120)};
+    const p=await r.json(); p.client_ms=Math.round(performance.now()-started); return p; }
+  const r=await LV.mcp.callTool(HOST,'omr_live',{since},{cache:false}); return {...(r.payload||{}),client_ms:Math.round(performance.now()-started)};
 }
-function liveMsg(t){ $('msg').textContent=t; }
+function liveMsg(t){ $('msg').textContent=t; const es=$('emptysub'); if(es) es.textContent=t; }
 function liveErr(e){
   const c=e&&e.code;
-  if(c==='server_not_connected') liveMsg('Live mode needs the local server: run twin/live_server.py on REDLAB and open http://localhost:8799.');
-  else if(c==='not_in_manifest') liveMsg('Access to the local server was denied for this page.');
-  else if(c==='approval_required') liveMsg('Approval needed: select LIVE again and choose Allow.');
-  else if(c==='cancelled') liveMsg('Cancelled in the app.');
-  else if(c==='tool_error') liveMsg('RPi not reachable from REDLAB: '+String(e.message||'').slice(0,160));
-  else liveMsg('Live interrupted ('+(c||'error')+'), retrying…');
+  if(c==='server_not_connected') liveMsg('Mode langsung memerlukan server lokal: jalankan twin/live_server.py di REDLAB dan buka http://localhost:8799.');
+  else if(c==='not_in_manifest') liveMsg('Akses halaman ini ke server lokal ditolak.');
+  else if(c==='approval_required') liveMsg('Persetujuan diperlukan: pilih LIVE lagi lalu izinkan akses.');
+  else if(c==='cancelled') liveMsg('Dibatalkan di aplikasi.');
+  else if(c==='tool_error') liveMsg('RPi tidak terjangkau dari REDLAB: '+String(e.message||'').slice(0,160));
+  else liveMsg('Sambungan langsung terputus ('+(c||'kesalahan')+'), mencoba ulang…');
   return c;
 }
 function liveEvents(test){
@@ -721,61 +908,81 @@ async function poll(){
     const p=await fetchLive(LV.since); LV.fails=0;
     const rows=(p.rows||[]).filter(x=>x[0]>LV.since);
     if(rows.length){
-      if(!D||!D.live){ setData({name:'LIVE', live:true, note:'Live data from the RPi OMR (1 Hz samples, about 3 s behind). Link cuts from the auto test or the Cut buttons are marked automatically.', start:rows[0][0], rows:[], events:[]}); }
+      if(!D||!D.live){ setData({name:'LANGSUNG', live:true, note:'Data langsung dari RPi OMR. Pemutusan link dari uji otomatis atau tombol kontrol ditandai otomatis.', start:rows[0][0], rows:[], events:[]}); }
       rows.forEach(x=>D.rows.push([x[0]-D.start, ...x.slice(1)]));
+      setBase(rate());
       schedAccumulate(rows);
       LV.since=rows[rows.length-1][0];
       if(D.rows.length>7200) D.rows.splice(0,D.rows.length-7200);
-      D.base=rate();
       const ev=liveEvents(p.test).concat(manualEvents(p.manual)).sort((x,y)=>x.t-y.t); const sig=JSON.stringify(ev);
       if(sig!==LV.evsig){ LV.evsig=sig; D.events=ev; refreshLists(); }
-      const run=p.test&&!p.test.done; LV.testRunning=!!run; schedButtons(); $('starttest').disabled=!!run; $('starttest').textContent= run?'Auto test running…':'Start auto test (7 min)';
-      liveMsg('Live connected · '+new Date(p.now*1000).toISOString().substr(11,8)+' UTC');
+      const run=p.test&&!p.test.done; LV.testRunning=!!run; schedButtons(); $('starttest').disabled=!!run; $('starttest').textContent= run?'Uji otomatis berjalan…':'Mulai uji otomatis (7 mnt)';
+      liveMsg('Data RPi diterima · '+new Date(p.now*1000).toISOString().substr(11,8)+' UTC');
     }
-  }catch(e){ const c=liveErr(e); LV.fails++; if(['server_not_connected','not_in_manifest','not_granted','capability_disabled'].includes(c)){ stopLive(); } }
+    LV.age=(p.now&&LV.since)? Math.max(0,Math.round(p.now-LV.since)) : null;
+    LV.clockSkew=Number.isFinite(p.clock_skew_s)?p.clock_skew_s:null;
+    LV.sshMs=Number.isFinite(p.ssh_ms)?p.ssh_ms:null;
+    const conn=$('conn');
+    if(conn) conn.title=[
+      LV.age==null?'Usia sampel RPi: belum tersedia':'Usia sampel RPi: '+LV.age+' dtk',
+      LV.clockSkew==null?'Selisih jam RPi–REDLAB: belum tersedia':'Selisih jam RPi–REDLAB: sekitar '+(LV.clockSkew>0?'+':'')+LV.clockSkew+' dtk (estimasi dari titik tengah permintaan)',
+      LV.sshMs==null?'Durasi SSH: belum tersedia':'Durasi pengambilan via SSH: '+LV.sshMs+' md',
+      Number.isFinite(p.client_ms)?'Durasi permintaan total: '+p.client_ms+' md':''
+    ].filter(Boolean).join('\n');
+    if(!LV.since) setConn('wait','Menunggu sampel RPi…');
+    else if(LV.age>15) setConn('stale','Data tertunda '+LV.age+' dtk');
+    else if(LV.clockSkew!==null&&Math.abs(LV.clockSkew)>5) setConn('stale','Jam RPi selisih '+Math.round(Math.abs(LV.clockSkew))+' dtk');
+    else setConn('live','LIVE · jeda '+(LV.age??'–')+' dtk');
+  }catch(e){ const c=liveErr(e); LV.fails++; setConn(LV.fails>=3?'off':'retry', LV.fails>=3?'RPi tak terjangkau':'Mencoba ulang…');
+    if(['server_not_connected','not_in_manifest','not_granted','capability_disabled'].includes(c)){ stopLive(); setConn('off','Live terputus'); } }
   finally{ LV.busy=false; }
 }
 async function startLive(){
-  liveMsg('Connecting to the RPi…');
+  liveMsg('Menghubungkan ke RPi…');
   let mcp = (window.claude && window.claude.use) ? await window.claude.use('mcp') : null, mode = mcp ? 'mcp' : null;
   if(!mcp){ try{ const r=await fetch('api/live?since=0',{cache:'no-store'}); if(r.ok) mode='http'; }catch(e){} }
-  if(!mode){ liveMsg(location.protocol==='file:'
-      ? 'This file was opened from disk, so it cannot fetch RPi data. Save it as twin/index.html, run "python3 live_server.py" in the twin folder, then open http://localhost:8799.'
-      : 'Live mode is not available here. Open http://localhost:8799 on REDLAB (run twin/live_server.py).'); return; }
+  if(!mode){ setConn('off','Mode langsung tidak tersedia'); liveMsg(location.protocol==='file:'
+      ? 'Berkas ini dibuka dari disk sehingga tidak dapat mengambil data RPi. Jalankan "python3 live_server.py" di folder twin, lalu buka http://localhost:8799.'
+      : 'Mode langsung tidak tersedia di sini. Buka http://localhost:8799 di REDLAB (jalankan twin/live_server.py).'); return; }
   LV={on:true, timer:null, since:0, mcp, mode, busy:false, fails:0, evsig:'', testRunning:false};
-  liveMsg(mode==='http'?'Connecting via the REDLAB local server…':'Connecting via the Claude app…');
+  liveMsg(mode==='http'?'Menghubungkan melalui server lokal REDLAB…':'Menghubungkan melalui aplikasi Claude…');
   D=null; $('starttest').hidden=false; playing=true; $('play').hidden=true; $('speeds').hidden=true;
   await poll(); LV.timer=setInterval(poll,2500);
-  schedStart(); vpnStart(); linkStart(); jetStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to look back';
+  schedStart(); vpnStart(); linkStart(); jetStart(); $('tlctl').hidden=false; $('tlhint').textContent='Seret grafik atau gunakan penggeser untuk melihat data sebelumnya';
 }
-function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); }
+function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); setConn('idle','Mode rekaman'); }
 $('starttest').onclick=()=>startTest();
 async function startTest(){
-  if(!LV.on) return false; $('starttest').disabled=true; liveMsg('Starting auto test on the RPi…');
+  if(!LV.on) return false; $('starttest').disabled=true; liveMsg('Memulai uji otomatis di RPi…');
   try{ let p; if(LV.mode==='http'){ const r=await fetch('api/start-test?duration=420',{method:'POST'}); p=await r.json(); } else { const r=await LV.mcp.callTool(HOST,'omr_start_test',{duration:420},{cache:false}); p=r.payload||{}; }
-    liveMsg(p.started?'Auto test started. Singtel is cut at second 30.':'Test not started: '+String(p.console||'').split('\n').slice(-3).join(' ')); return !!p.started; }
+    liveMsg(p.started?'Uji otomatis dimulai. Singtel diputus pada detik ke-30.':'Uji gagal dimulai: '+String(p.console||'').split('\n').slice(-3).join(' ')); return !!p.started; }
   catch(e){ liveErr(e); $('starttest').disabled=false; return false; }
 }
 function refreshLists(){
   const ol=$('events'); ol.innerHTML='';
   D.events.forEach(e=>{ const li=document.createElement('li'); const b=document.createElement('button');
-    b.innerHTML=`<span class="t">${hms(D.start+e.t).substr(0,8)}</span><span>${e.label}</span>`; b.dataset.t=e.t; li.appendChild(b); ol.appendChild(li); });
+    b.innerHTML=`<span class="t">${hms(D.start+e.t).substr(0,8)}</span><span>${esc(e.label)}</span>`; b.dataset.t=e.t; b.title='Tampilkan di timeline';
+    b.onclick=()=>{ if(!hasData()||!VIEW.span) return; const [a,z]=bounds(), span=Math.min(VIEW.span,z-a), end=Math.max(a+span,Math.min(z,e.t+span*0.35));
+      VIEW.follow=end>=z-0.5; VIEW.end=end; draw(false); };
+    li.appendChild(b); ol.appendChild(li); });
   const tb=$('sum'); tb.innerHTML='';
   summary().forEach(s=>{ const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${s.e.label}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} s</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'down':'up')+' +'+s.det+' s'}</td>`; tb.appendChild(tr); });
+    tr.innerHTML=`<td>${esc(s.e.label)}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} dtk</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'putus':'pulih')+' +'+s.det+' dtk'}</td>`; tb.appendChild(tr); });
+  if(!D.events.length) ol.innerHTML='<li class="emptyrow">Belum ada kejadian. Pemutusan link dan langkah uji otomatis akan muncul di sini.</li>';
+  if(!tb.children.length) tb.innerHTML='<tr><td colspan="4" class="emptyrow">Belum ada kejadian untuk diringkas.</td></tr>';
   $('pnote').textContent=D.note||'';
 }
 
 /* ---------- scheduler test (only via local server live_server.py) ---------- */
 const SETTLE=25;   // seconds after a switch that are not counted (tunnel restart)
 const SCHED_INFO={
-  default:'<b>default</b> — kernel built-in. Fills the lowest-RTT subflow first (Simba ≈11 ms), the rest goes to the other subflow. Baseline for comparison.',
-  bpf_minrtt:'<b>bpf_minrtt</b> — always picks the subflow with the smallest RTT. Likely similar to default, with Simba even more dominant.',
-  bpf_rr:'<b>bpf_rr</b> — round-robin, alternates between subflows. <span class="warn">Earlier test: the second subflow never formed / got lost.</span> Watch the “OpenVPN tunnel” chip on the link cards.',
-  bpf_first:'<b>bpf_first</b> — always uses the first subflow; the others are only backup when it disappears. Good for observing pure failover.',
-  bpf_bkup:'<b>bpf_bkup</b> — uses only non-backup subflows; backup subflows are used when the primary dies. Without endpoints flagged as backup it behaves like default.',
-  bpf_burst:'<b>bpf_burst</b> — like default, but sends in bursts to the best subflow. Watch whether the stream gets burstier.',
-  bpf_red:'<b>bpf_red</b> — redundant (disabled). <span class="warn">On this kernel it breaks the OpenVPN --mptcp tunnel: the handshake never completes, tun0 stays down, and recovery needed a VPS reboot.</span> Do not use.'
+  default:'<b>default</b> — penjadwal bawaan kernel. Memilih sub-alur dengan RTT terendah terlebih dahulu (Simba ≈11 ms), lalu mengirim sisanya melalui sub-alur lain. Acuan perbandingan.',
+  bpf_minrtt:'<b>bpf_minrtt</b> — selalu memilih sub-alur dengan RTT terkecil. Hasilnya kemungkinan mirip dengan default, dengan trafik lebih banyak melalui Simba.',
+  bpf_rr:'<b>bpf_rr</b> — bergiliran antar-sub-alur. <span class="warn">Pada uji sebelumnya, sub-alur kedua tidak terbentuk atau terputus.</span> Pantau status tunnel OpenVPN pada kartu link.',
+  bpf_first:'<b>bpf_first</b> — selalu menggunakan sub-alur pertama; sub-alur lain hanya menjadi cadangan saat sub-alur pertama hilang. Berguna untuk mengamati pengalihan jalur.',
+  bpf_bkup:'<b>bpf_bkup</b> — hanya menggunakan sub-alur non-cadangan; sub-alur cadangan dipakai saat jalur utama gagal. Tanpa penanda cadangan, perilakunya sama seperti default.',
+  bpf_burst:'<b>bpf_burst</b> — seperti default, tetapi mengirim dalam rentetan melalui sub-alur terbaik. Amati apakah aliran menjadi lebih berombak.',
+  bpf_red:'<b>bpf_red</b> — redundan (dinonaktifkan). <span class="warn">Pada kernel ini, mode tersebut merusak tunnel OpenVPN --mptcp: jabat tangan tidak selesai dan pemulihan memerlukan mulai ulang VPS.</span> Jangan gunakan.'
 };
 let SC={cur:null, avail:[], log:[], busy:false, timer:null, run:{}};
 let STATS={}; try{ STATS=JSON.parse(localStorage.getItem('twin.schedstats.v1')||'{}')||{}; }catch(e){ STATS={}; }
@@ -791,7 +998,7 @@ function schedAccumulate(rows){
   for(const x of rows){ const ep=x[0], seg=schedAt(ep); if(!seg.init && ep-seg.start<SETTLE) continue;
     const key=seg.start+'|'+seg.name; const st=STATS[key]||(STATS[key]={name:seg.name,start:seg.start,first:ep,last:ep,n:0,a:0,b:0,stall:0,run:0,maxrun:0,full:0,tun:0,cut:0});
     if(ep<=st.last && st.n) continue; st.last=ep; st.n++; st.a+=x[1]; st.b+=x[2];
-    if(x[1]+x[2]<STALL){ st.stall++; st.run++; st.maxrun=Math.max(st.maxrun,st.run); } else st.run=0;
+    if(isStalled(x[1]+x[2])){ st.stall++; st.run++; st.maxrun=Math.max(st.maxrun,st.run); } else st.run=0;
     if(x.length>=7){ st.tun++; if(x[5]&&x[6]) st.full++; }
     if(x.length>=9 && (x[7]===1||x[8]===1)) st.cut=1; }
   saveStats(); renderCmp();
@@ -804,10 +1011,10 @@ function renderCmp(){
   const bAvg=best(avg,1), bSt=best(s=>s.stall,0), bMx=best(s=>s.maxrun,0), bFull=best(full,1);
   const curKey=SC.log.length? (()=>{const g=schedAt(Date.now()/1000); return g.start+'|'+g.name;})() : '';
   $('cmpb').innerHTML=list.map(s=>{ const k=s.start+'|'+s.name, f=full(s);
-    return `<tr class="${k===curKey&&LV.on?'now':''}"><td>${k===curKey&&LV.on?'<span class="sdot" title="running now"></span>':''}${s.name}</td><td class="n">${hms(s.first)}</td><td class="n">${fmt(s.n)}</td>`+
-      `<td class="n ${avg(s)===bAvg?'best':''}">${avg(s)} kbps</td><td class="n">${sh(s)}% / ${100-sh(s)}%</td>`+
+    return `<tr class="${k===curKey&&LV.on?'now':''}"><td>${k===curKey&&LV.on?'<span class="sdot" title="sedang berjalan"></span>':''}${s.name}</td><td class="n">${hms(s.first)}</td><td class="n">${fmt(s.n)}</td>`+
+      `<td class="n ${avg(s)===bAvg?'best':''}">${kfmt(avg(s))}</td><td class="n">${sh(s)}% / ${100-sh(s)}%</td>`+
       `<td class="n ${s.stall===bSt?'best':(s.stall>=5?'bad':'')}">${s.stall} s</td><td class="n ${s.maxrun===bMx?'best':(s.maxrun>=5?'bad':'')}">${s.maxrun} s</td>`+
-      `<td class="n ${f!==null&&f===bFull?'best':(f!==null&&f<90?'bad':'')}">${f===null?'–':f+'%'}</td><td>${s.cut?'yes':'no'}</td></tr>`; }).join('');
+      `<td class="n ${f!==null&&f===bFull?'best':(f!==null&&f<90?'bad':'')}">${f===null?'–':f+'%'}</td><td>${s.cut?'ya':'tidak'}</td></tr>`; }).join('');
 }
 function schedButtons(){
   const live=LV.on&&LV.mode==='http', dis=!live||SC.busy||LV.testRunning||!SC.avail.length;
@@ -815,36 +1022,36 @@ function schedButtons(){
   if(live && !SC.busy && $('schedsel').value===SC.cur) $('schedapply').disabled=true;
   if(live && !SC.busy && SC.cur==='default') $('scheddef').disabled=true;
 }
-function schedDesc(){ const n=$('schedsel').value; $('scheddesc').innerHTML=(SCHED_INFO[n]||('<b>'+n+'</b> — additional BPF scheduler on the RPi.'))+
-  ' Switching restarts the OpenVPN tunnel (stream pauses ≈10–20 s), because a scheduler only applies to new MPTCP connections. Not persistent: lost when the RPi reboots.'; }
+function schedDesc(){ const n=$('schedsel').value; $('scheddesc').innerHTML=(SCHED_INFO[n]||('<b>'+n+'</b> — penjadwal BPF tambahan di RPi.'))+
+  ' Pergantian memulai ulang tunnel OpenVPN (aliran jeda ≈10–20 dtk), karena penjadwal hanya berlaku untuk koneksi MPTCP baru. Tidak persisten: pengaturan hilang saat RPi dimulai ulang.'; }
 async function fetchSched(){
   const r=await fetch('api/sched',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
   const first=!SC.avail.length; SC.cur=p.current; SC.avail=(p.available||[]).filter(n=>n!=='bpf_red'); SC.log=(p.log||[]).sort((a,b)=>a[0]-b[0]);
   const sel=$('schedsel'), keep=sel.value;
-  if(first || sel.options.length!==SC.avail.length){ sel.innerHTML=SC.avail.map(n=>`<option value="${n}">${n}${n===SC.cur?' (active)':''}</option>`).join(''); sel.value=keep&&SC.avail.includes(keep)?keep:SC.cur; }
-  [...sel.options].forEach(o=>o.textContent=o.value+(o.value===SC.cur?' (active)':''));
-  $('schedcur').textContent='active: '+SC.cur; $('schedcur').className='chip ok';
+  if(first || sel.options.length!==SC.avail.length){ sel.innerHTML=SC.avail.map(n=>`<option value="${n}">${n}${n===SC.cur?' (aktif)':''}</option>`).join(''); sel.value=keep&&SC.avail.includes(keep)?keep:SC.cur; }
+  [...sel.options].forEach(o=>o.textContent=o.value+(o.value===SC.cur?' (aktif)':''));
+  $('schedcur').textContent='aktif: '+SC.cur; $('schedcur').className='chip ok';
   schedDesc(); schedButtons(); renderCmp(); if(D) draw(true);
   return p;
 }
 async function schedStart(){
   if(LV.mode!=='http'){ $('schedp').hidden=true; return; }
-  $('schedp').hidden=false; schedMsg('Reading scheduler on the RPi…');
+  $('schedp').hidden=false; schedMsg('Membaca penjadwal di RPi…');
   try{ await fetchSched(); schedMsg(''); }
-  catch(e){ schedMsg('Scheduler control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
+  catch(e){ schedMsg('Kontrol penjadwal tidak tersedia: '+String(e.message||e).slice(0,140)+'. Perbarui live_server.py.'); }
   SC.timer=setInterval(()=>{ if(!SC.busy) fetchSched().catch(()=>{}); },15000);
 }
-function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); jetStop(); $('tlctl').hidden=true; $('tlhint').textContent='Click or drag the chart to jump in time'; }
+function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); jetStop(); $('tlctl').hidden=true; $('tlhint').textContent='Seret grafik untuk menelusuri waktu'; }
 
 /* ---------- transport / VPN switch (compare Glorytun UDP vs Glorytun TCP/MPTCP) ---------- */
 const VPN_INFO={
-  glorytun_udp:'<b>Glorytun UDP</b> — aggregates both SIMs over UDP (not kernel MPTCP). Most stable, both links share the load roughly evenly, normal latency. The MPTCP scheduler above has <b>no effect</b> here.',
-  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — the tunnel is one TCP connection bonded by kernel MPTCP across both SIMs (look for 2 subflows). The <b>scheduler above now affects the camera</b>. With very different link RTTs a single light stream leans to the low-RTT SIM and latency is higher (head-of-line blocking).'
+  glorytun_udp:'<b>Glorytun UDP</b> — menggabungkan kedua SIM melalui UDP (bukan MPTCP kernel). Stabil; kedua link berbagi beban secara seimbang. Penjadwal MPTCP di atas <b>tidak berpengaruh</b> pada mode ini.',
+  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — satu koneksi TCP digabung oleh MPTCP kernel melalui kedua SIM (lihat 2 sub-alur). <b>Penjadwal di atas memengaruhi kamera</b>. Jika RTT kedua link berbeda jauh, satu aliran ringan cenderung memakai SIM dengan RTT rendah.'
 };
 const VP={cur:null,avail:[],busy:false,timer:null};
 function vpnDesc(){ $('vpndesc').innerHTML=VPN_INFO[$('vpnsel').value]||('<b>'+$('vpnsel').value+'</b>'); }
 function vpnMsg(t){ $('vpnmsg').textContent=t; }
-function vpnButtons(){ const dis=VP.busy||LV.testRunning; ['vpnsel','vpnapply'].forEach(id=>$(id).disabled=dis); if(!VP.busy&&$('vpnsel').value===VP.cur)$('vpnapply').disabled=true; }
+function vpnButtons(){ const dis=VP.busy||LV.testRunning||!VP.avail.length; ['vpnsel','vpnapply'].forEach(id=>$(id).disabled=dis); if(!VP.busy&&$('vpnsel').value===VP.cur)$('vpnapply').disabled=true; }
 async function fetchVpn(){
   const r=await fetch('api/vpn',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
   VP.cur=p.current; VP.avail=p.available||[]; const sel=$('vpnsel');
@@ -856,18 +1063,22 @@ async function fetchVpn(){
 }
 async function vpnApply(name){
   if(name===VP.cur) return;
-  VP.busy=true; vpnButtons(); vpnMsg('Switching to '+name+'… restarts the tunnel (~30–60 s), camera pauses briefly.');
+  VP.busy=true; vpnButtons(); vpnMsg('Mengganti ke '+name+'… tunnel dimulai ulang (~30–60 dtk), kamera jeda sebentar.');
   try{
     const r=await fetch('api/vpn?name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
     if(!r.ok||p.ok===false) throw new Error(p.error||('HTTP '+r.status));
-    VP.cur=p.current; vpnMsg('Now on '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Camera returns in a few seconds.');
-  }catch(e){ vpnMsg('Switch failed: '+String(e.message||e).slice(0,160)); }
+    VP.cur=p.current; vpnMsg('Kini menggunakan '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Kamera akan kembali dalam beberapa detik.');
+  }catch(e){ vpnMsg('Gagal mengganti transport: '+String(e.message||e).slice(0,160)); }
   VP.busy=false; await fetchVpn().catch(()=>{}); vpnButtons();
 }
 async function vpnStart(){
   if(LV.mode!=='http'){ $('vpnp').hidden=true; return; }
-  $('vpnp').hidden=false; vpnMsg('Reading transport…');
-  try{ await fetchVpn(); vpnMsg(''); }catch(e){ vpnMsg('Transport control unavailable: '+String(e.message||e).slice(0,140)+'. Update live_server.py.'); }
+  $('vpnp').hidden=false; vpnMsg('Memuat transport…');
+  try{ await fetchVpn(); vpnMsg(''); }catch(e){
+    $('vpnsel').innerHTML='<option value="">Transport tidak tersedia</option>';
+    VP.avail=[]; vpnButtons();
+    vpnMsg('Gagal memuat transport: '+String(e.message||e).slice(0,140));
+  }
   VP.timer=setInterval(()=>{ if(!VP.busy) fetchVpn().catch(()=>{}); },15000);
 }
 function vpnStop(){ if(VP.timer) clearInterval(VP.timer); VP.timer=null; $('vpnp').hidden=true; }
@@ -879,21 +1090,21 @@ async function waitTunnel(since, maxS){ // tunggu sampel live terbaru menunjukka
   while((Date.now()-t0)/1000<maxS){ await sleep(1500);
     const last=D&&D.rows.length? D.rows[D.rows.length-1] : null;
     if(last && D.start+last[0]>since+10 && last.length>=7 && last[5] && last[6]) return true;
-    schedMsg(`Waiting for the tunnel to return with 2 subflows… ${Math.round((Date.now()-t0)/1000)} s`); }
+    schedMsg(`Menunggu tunnel kembali dengan 2 sub-alur… ${Math.round((Date.now()-t0)/1000)} dtk`); }
   return false;
 }
 async function schedApply(name, thenTest){
   if(SC.busy||!LV.on) return; SC.busy=true; schedButtons();
-  schedMsg(`Switching scheduler to ${name} and restarting the OpenVPN tunnel…`);
+  schedMsg(`Mengganti penjadwal ke ${name} dan memulai ulang tunnel OpenVPN…`);
   try{
     const r=await fetch('api/sched?restart=1&name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
     if(!r.ok||!p.ok) throw new Error(p.error||('HTTP '+r.status));
     await fetchSched();
     const ok=await waitTunnel(p.now||Date.now()/1000, 75);
-    if(!ok) schedMsg(`${name} active, but the tunnel has not returned to 2 subflows after 75 s (ovpn-guard will try to recover it).`);
-    else schedMsg(`${name} active · tunnel has 2 subflows.`);
-    if(thenTest){ await sleep(ok?5000:0); const started=await startTest(); schedMsg((ok?'':'⚠ tunnel not yet 2 subflows · ')+(started?`${name} active · 7-min auto test running. Results go into the comparison table.`:`${name} active, but the auto test did not start (see message above).`)); }
-  }catch(e){ schedMsg('Failed to switch scheduler: '+String(e.message||e).slice(0,160)); }
+    if(!ok) schedMsg(`${name} aktif, tetapi tunnel belum kembali dengan 2 sub-alur setelah 75 dtk (ovpn-guard akan mencoba memulihkan).`);
+    else schedMsg(`${name} aktif · tunnel memiliki 2 sub-alur.`);
+    if(thenTest){ await sleep(ok?5000:0); const started=await startTest(); schedMsg((ok?'':'⚠ tunnel belum memiliki 2 sub-alur · ')+(started?`${name} aktif · uji otomatis 7 menit berjalan. Hasil masuk ke tabel perbandingan.`:`${name} aktif, tetapi uji otomatis gagal dimulai (lihat pesan di atas).`)); }
+  }catch(e){ schedMsg('Gagal mengganti penjadwal: '+String(e.message||e).slice(0,160)); }
   finally{ SC.busy=false; schedButtons(); }
 }
 $('schedsel').onchange=()=>{ schedDesc(); schedButtons(); };
@@ -914,14 +1125,14 @@ renderCmp();
 const LNAME={wan1:'Simba',wan2:'Singtel'};
 let LK={cut:{wan1:false,wan2:false}, mode:'auto', busy:false, timer:null};
 function manualEvents(list){ if(!list||!D||!D.rows.length) return [];
-  return list.map(m=>({t:m.ep-D.start, label:(m.kind==='down'?'Cut ':'Restore ')+LNAME[m.dev]+(m.how==='auto-restore'?' (auto-restore)':' (manual)'), kind:m.kind, link:m.dev==='wan1'?1:2}))
+  return list.map(m=>({t:m.ep-D.start, label:(m.kind==='down'?'Putus ':'Pulih ')+LNAME[m.dev]+(m.how==='auto-restore'?' (otomatis)':' (manual)'), kind:m.kind, link:m.dev==='wan1'?1:2}))
     .filter(e=>e.t>=D.rows[0][0]-60); }
 function linkMsg(t){ $('linkmsg').textContent=t; }
 function renderLink(){
   const live=LV.on&&LV.mode==='http';
   [['cut1','wan1'],['cut2','wan2']].forEach(([id,d])=>{ const b=$(id), other=d==='wan1'?'wan2':'wan1';
-    b.textContent=LK.cut[d]?'Restore':'Cut'; b.classList.toggle('on',LK.cut[d]);
-    b.disabled=!live||LK.busy||(!LK.cut[d]&&LK.cut[other]); b.title=(!LK.cut[d]&&LK.cut[other])?'Restore '+LNAME[other]+' first: cutting both would drop the RPi connection':''; });
+    b.textContent=LK.cut[d]?'Pulihkan':'Putus'; b.classList.toggle('on',LK.cut[d]);
+    b.disabled=!live||LK.busy||(!LK.cut[d]&&LK.cut[other]); b.title=(!LK.cut[d]&&LK.cut[other])?'Pulihkan '+LNAME[other]+' terlebih dahulu agar koneksi RPi tidak terputus':''; });
   [...$('prio').children].forEach(b=>{ b.className=b.dataset.m===LK.mode?'on':''; b.disabled=!live||LK.busy; });
   $('cutsecs').disabled=!live||LK.busy;
 }
@@ -930,17 +1141,17 @@ async function fetchLink(){ const p=await api('GET','api/link'); LK.cut=p.cut; L
 async function linkAction(dev){
   if(LK.busy) return; LK.busy=true; renderLink();
   const cutting=!LK.cut[dev], secs=$('cutsecs').value;
-  linkMsg(cutting?`Cutting ${LNAME[dev]}…`:`Restoring ${LNAME[dev]}…`);
+  linkMsg(cutting?`Memutus ${LNAME[dev]}…`:`Memulihkan ${LNAME[dev]}…`);
   try{ const p=await api('POST',`api/link?dev=${dev}&action=${cutting?'cut':'restore'}&secs=${secs}`); LK.cut=p.cut; LK.mode=p.mode;
-    linkMsg(cutting?`${LNAME[dev]} cut — restores itself in ${Math.round(secs/60)} min. OMR notices in ≈20–30 s.`:`${LNAME[dev]} restored. The tunnel subflow returns within ≈15–40 s (ovpn-guard helps).`); }
-  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
+    linkMsg(cutting?`${LNAME[dev]} terputus — pulih otomatis dalam ${Math.round(secs/60)} mnt. OMR mendeteksinya dalam ≈20–30 dtk.`:`${LNAME[dev]} pulih. Sub-alur tunnel kembali dalam ≈15–40 dtk.`); }
+  catch(e){ linkMsg('Gagal: '+String(e.message||e).slice(0,180)); }
   finally{ LK.busy=false; renderLink(); }
 }
 async function setPrio(m){
-  if(LK.busy||m===LK.mode) return; LK.busy=true; renderLink(); linkMsg('Setting primary path…');
+  if(LK.busy||m===LK.mode) return; LK.busy=true; renderLink(); linkMsg('Mengatur jalur utama…');
   try{ const p=await api('POST','api/prio?mode='+m); LK.mode=p.mode; LK.cut=p.cut;
-    linkMsg(m==='auto'?'Both links normal: the scheduler decides.':(m==='simba'?'Simba first: Singtel is backup.':'Singtel first: Simba is backup.')); }
-  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
+    linkMsg(m==='auto'?'Kedua link aktif: penjadwal menentukan jalur.':(m==='simba'?'Simba utama: Singtel menjadi cadangan.':'Singtel utama: Simba menjadi cadangan.')); }
+  catch(e){ linkMsg('Gagal: '+String(e.message||e).slice(0,180)); }
   finally{ LK.busy=false; renderLink(); }
 }
 $('cut1').onclick=()=>linkAction('wan1'); $('cut2').onclick=()=>linkAction('wan2');
@@ -948,7 +1159,7 @@ $('cut1').onclick=()=>linkAction('wan1'); $('cut2').onclick=()=>linkAction('wan2
 async function linkStart(){
   if(LV.mode!=='http'){ $('linkp').hidden=true; return; }
   $('linkp').hidden=false; renderLink();
-  try{ await fetchLink(); }catch(e){ linkMsg('Link control unavailable: '+String(e.message||e).slice(0,140)+'. Make sure live_server.py is the latest version.'); }
+  try{ await fetchLink(); }catch(e){ linkMsg('Kontrol link tidak tersedia: '+String(e.message||e).slice(0,140)+'. Perbarui live_server.py.'); }
   LK.timer=setInterval(()=>{ if(!LK.busy) fetchLink().catch(()=>{}); },10000);
 }
 function linkStop(){ if(LK.timer) clearInterval(LK.timer); LK.timer=null; $('linkp').hidden=true; }
@@ -976,10 +1187,10 @@ async function jetPoll(){
     const r=JET.whist.slice(-6).map(s=>s[1]); const moved=r.length>=3 && (Math.max(...r)-Math.min(...r))>0.02;
     JET.aiOn = moved && (now-JET.userAt>15000);
     JET.w=w; jetRenderW(); drawSpark();
-    const ai=$('jai'); if(ai){ ai.textContent=JET.aiOn?'● AI aktif · menggerakkan split':'split statik'; ai.className='chip aistat'+(JET.aiOn?' on':''); }
+    const ai=$('jai'); if(ai){ ai.textContent=JET.aiOn?'● AI aktif · mengubah pembagian':'pembagian tetap'; ai.className='chip aistat'+(JET.aiOn?' on':''); }
   }catch(e){}
 }
-$('jload').onclick=async()=>{ $('jload').disabled=true;
+$('jload').onclick=async()=>{ if(!confirm('Uji beban mengirim ~30 Mbit/s selama 30 detik lewat dua SIM (≈110 MB kuota seluler). Lanjutkan?')) return; $('jload').disabled=true;
   try{ const p=await api('POST','api/loadtest?action=start&secs=30&mbps=30'); JET.loadUntil=Date.now()+(p.secs||30)*1000; $('jmsg').textContent=''; }
   catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); $('jload').disabled=false; } };
 [...$('jsplit').children].forEach(b=>b.onclick=()=>jetSetW(+b.dataset.w));
@@ -996,20 +1207,32 @@ function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
   if(JET.loadUntil){ const left=Math.ceil((JET.loadUntil-Date.now())/1000);
     if(left>0){ $('jload').textContent='Uji beban… '+left+'s'; $('jload').disabled=true; }
     else { JET.loadUntil=0; $('jload').textContent='Uji beban 30 dtk'; $('jload').disabled=false; } } }
-function aiRender(d){ if(!d||!d.state) return; const s=d.state;
+function aiRender(d){
+  if(!d||!d.state){ const st=$('aists'); st.textContent=d&&d.available===false?'menunggu Jetson':'tidak tersedia'; st.className='chip '+(d&&d.available===false?'':'bad');
+    $('ai_s1').textContent='belum ada data'; $('ai_s2').textContent='belum ada data'; $('ai_w').textContent='w=—';
+    $('ai_cand').innerHTML='<div class="emptyrow">Belum ada keputusan dari controller Jetson.</div>';
+    $('ai_why').textContent=(d&&d.message)||'Jalankan controller LinUCB di Jetson. Kesalahan komunikasi akan ditampilkan di sini.'; return; }
+  const s=d.state;
   $('ai_s1').textContent='RTT '+s.rtt1+' ms · cap ~'+s.cap1+' Mb';
   $('ai_s2').textContent='RTT '+s.rtt2+' ms · cap ~'+s.cap2+' Mb';
   const cand=d.cand||[];
   $('ai_cand').innerHTML=cand.map(c=>{ const pct=Math.round((c.score||0)*100);
-    return `<div class="candrow ${c.chosen?'pick':''}"><span class="wl">w=${(+c.w).toFixed(2)}</span><div class="cb"><span style="width:${pct}%"></span></div><span class="pk">${c.chosen?'✓ pilih':''}</span></div>`;
+    return `<div class="candrow ${c.chosen?'pick':''}"><span class="wl">w=${(+c.w).toFixed(2)}</span><div class="cb"><span style="width:${pct}%"></span></div><span class="pk">${c.chosen?'✓ dipilih':''}</span></div>`;
   }).join('');
   const ch=d.chosen||{};
   $('ai_w').textContent='w='+(ch.w!=null?(+ch.w).toFixed(2):'–');
-  $('ai_n').textContent=(ch.N!=null?('· N='+ch.N+' sub-stream'):'');
+  $('ai_n').textContent=(ch.N!=null?('· N='+ch.N+' sub-alur'):'');
   $('ai_why').textContent=d.reason||'';
   const st=$('aists'), age=d.ts?Math.round(Date.now()/1000-d.ts):999;
-  if(age<12){ st.textContent='● live'; st.className='chip ok'; } else { st.textContent='menunggu Jetson'; st.className='chip'; } }
-async function aiPoll(){ try{ aiRender(await api('GET','api/jet')); }catch(e){} }
+  if(age<12){ st.textContent='● langsung'; st.className='chip ok'; } else { st.textContent='menunggu Jetson'; st.className='chip'; } }
+function aiError(e){
+  const message='Gagal membaca data AI: '+String(e.message||e).slice(0,160);
+  $('aists').textContent='galat'; $('aists').className='chip bad';
+  $('ai_s1').textContent='data tidak tersedia'; $('ai_s2').textContent='data tidak tersedia';
+  $('ai_w').textContent='w=—'; $('ai_cand').innerHTML='<div class="emptyrow">Tidak dapat mengambil keputusan AI dari RPi.</div>';
+  $('ai_why').textContent=message;
+}
+async function aiPoll(){ try{ aiRender(await api('GET','api/jet')); }catch(e){ aiError(e); } }
 async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; $('aiwork').hidden=true; return; }
   $('jetp').hidden=false; $('aiwork').hidden=false;
   try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); jetPoll(); aiPoll(); }
@@ -1056,17 +1279,33 @@ function frame(ts){
   if(D&&D.rows.length){
     const end=D.rows[D.rows.length-1][0];
     if(D.live){ const last=D.rows[D.rows.length-1][0]; cur=Math.min(last, Math.max(cur+dt, last-3.5)); }
-    else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Play'; } }
+    else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Putar'; } }
     const row=rowAt(cur), simDt=cur-lastSimT; lastSimT=cur;
     if(simDt>0 && simDt<5) queue=Math.max(0, queue + (D.base-(row[1]+row[2]))*simDt); else if(simDt<0||simDt>=5) queue=0;
-    drawDiagram(row,dt); drawTL(); drawLat(); readouts(row);
+    drawDiagram(row,dt);   // particles: every frame
+    if(ts-UI.slow>140){ UI.slow=ts; drawTL(); drawLat(); readouts(row); tlTip(); }   // charts + DOM: ~7 Hz is plenty for 1 Hz data
   }
+  const has=hasData(); if(has!==UI.has){ UI.has=has; $('empty').hidden=has; }
   requestAnimationFrame(frame);
 }
-function resize(){ layout(); tlLayout(); latLayout(); drawSpark(); if(D) draw(true); }
+function resize(){ cssReset(); layout(); tlLayout(); latLayout(); drawSpark(); if(D) draw(true); }
 addEventListener('resize',resize);
-try{ new MutationObserver(()=>D&&draw(true)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
+try{ new MutationObserver(()=>{ cssReset(); drawSpark(); if(D) draw(true); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); }catch(e){}
+/* ---------- theme toggle (persisted; dark by default for the control-room look) ---------- */
+function setTheme(n){ document.documentElement.dataset.theme=n; try{ localStorage.setItem('twin.theme',n); }catch(e){}
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content= n==='dark'?'#0a0e14':'#eef2f6';
+  $('themebtn').textContent= n==='dark'?'☀':'☾'; }
+$('themebtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+addEventListener('keydown',e=>{ if(e.ctrlKey||e.metaKey||e.altKey||(e.target.closest&&e.target.closest('input,select,textarea'))) return; if(e.key==='t'||e.key==='T') setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'); });
+setTheme(document.documentElement.dataset.theme==='light'?'light':'dark');
 resize();
 $('preset').value='live'; startLive();
 requestAnimationFrame(frame);
+/* ---------- status bar (1 Hz) ---------- */
+setInterval(()=>{ const t=id=>{ const e=$(id); return e?e.textContent.trim():''; }, set=(id,v)=>{ const e=$(id); if(e&&e.textContent!==v) e.textContent=v||'–'; };
+  const c=$('conn'); $('sb_led').dataset.s=c?c.dataset.s:''; set('sb_feed', t('conntxt'));
+  set('sb_sched', t('schedcur').replace(/^aktif:\s*/,'')); set('sb_vpn', t('vpncur')); set('sb_ai', t('aists'));
+  set('sb_thr', STALL+' kbps'); set('sb_utc', new Date().toISOString().substr(11,8)); }, 1000);
 </script>
+</body>
+</html>

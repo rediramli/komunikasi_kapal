@@ -239,6 +239,46 @@ always-on retries churn the single-session tunnel. The tunnel and the Jetson
 controller are started by hand here — a real deployment runs them as services
 (rc.local / systemd) and co-locates the Jetson on the Omada switch.
 
+## Learned vs heuristic under volatility (maritime)
+
+`maritime.py` is the experiment that isolates the ML contribution against the kind
+of scheduler commercial bonding products use. It drives a volatile link trace
+(gradual fades and abrupt partial dropouts, as from weather / obstruction /
+mobility) carrying one video stream of a fixed bitrate, where load sent to a
+dropped link is lost — so the split, and its timing, matter.
+
+Baselines: `fixed` (static 50/50), `reactive` (a realistic commercial-style
+heuristic that splits by an EWMA-smoothed measurement — smoothing avoids flapping
+but lags), `learned` (LinUCB with a trend feature), `oracle`.
+
+800 traces x 300 s:
+
+| policy | goodput | outage time |
+|---|---|---|
+| fixed 50/50 | 19.1 Mbit/s | 22% |
+| reactive heuristic (smoothed) | 20.3 Mbit/s | 13% |
+| **learned controller** | **20.8 Mbit/s** | **11%** |
+| oracle | 21.2 Mbit/s | 9% |
+
+Findings (honest):
+- **Adaptation is essential** — a fixed split spends 22% of the time in outage;
+  any adaptive policy roughly halves that.
+- **The learned controller beats a realistic (smoothed) heuristic** — ~+2%
+  goodput and **~11% less outage time** — because it learns the optimal fast-yet-
+  stable response to abrupt dropouts, where the heuristic must smooth (lag) to
+  avoid flapping. It reaches 98% of the oracle.
+- This is the differentiator vs products like Kognitive, whose materials describe
+  heuristic scheduling and no learned/adaptive policy.
+
+Caveats: calibrated simulation, not maritime measurements (real Starlink dropout
+traces would validate it); the edge is modest, not dramatic; LinUCB captures
+*reactive* adaptation — anticipating *periodic* events (Starlink obstruction
+cycles) would need a temporal model (DQN/RNN), the clear next step.
+
+```bash
+python3 maritime.py --trials 800
+```
+
 ## Honest caveats
 
 - `link_model.py` is a **model calibrated to our measurements**, not the real

@@ -7,7 +7,7 @@ Data and control go to the RPi over SSH (key login, same as run.sh).
 
 Endpoints
   GET  /                              the page (twin/index.html)
-  GET  /api/live?since=EPOCH          1 Hz samples from the RPi (+ manual cut flags/events)
+  GET  /api/live?since=EPOCH          RPi samples, sampler age, SSH duration, clock-offset estimate (+ manual cut flags/events)
   POST /api/start-test?duration=S     automatic failover test (failover-test.sh)
   GET  /api/sched                     active scheduler, list, switch history
   POST /api/sched?name=X&restart=1    switch scheduler (sysctl, not persistent) + restart OpenVPN
@@ -38,7 +38,9 @@ CUTS = {"wan1": [], "wan2": []}           # [start_epoch, end_epoch|None, planne
 MANUAL = []                               # [{"ep":..,"dev":..,"kind":"down"|"up","how":"manual"|"auto-restore"}]
 
 def rpi(cmd, timeout=30):
-    r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", RPI, cmd],
+    r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+                        "-o", "ControlMaster=auto", "-o", "ControlPath=/tmp/omr-twin-%r@%h:%p",
+                        "-o", "ControlPersist=120", RPI, cmd],
                        capture_output=True, text=True, timeout=timeout)
     return r.returncode, r.stdout, r.stderr
 
@@ -68,9 +70,19 @@ def split_set(w):
 JET_DECISION = "/tmp/jet_decision.json"   # edge_control.py on the Jetson writes its live decision here (via the RPi)
 def jet_status():
     """The Jetson AI's latest decision snapshot: observed state, per-split scores, chosen (N,w)."""
-    rc, out, err = rpi("cat %s 2>/dev/null || echo '{}'" % JET_DECISION)
-    try: d = json.loads((out or "").strip() or "{}")
-    except Exception: d = {}
+    rc, out, err = rpi("if [ -r %s ]; then cat %s; else echo '{\"available\":false}'; fi"
+                       % (JET_DECISION, JET_DECISION))
+    if rc != 0:
+        raise RuntimeError((err or out).strip()[:200] or "SSH ke RPi gagal saat membaca status Jetson")
+    try:
+        d = json.loads((out or "").strip() or "{}")
+    except json.JSONDecodeError as e:
+        raise RuntimeError("berkas keputusan Jetson bukan JSON yang valid") from e
+    if not isinstance(d, dict):
+        raise RuntimeError("format berkas keputusan Jetson tidak valid")
+    if not d.get("state"):
+        d.setdefault("available", False)
+        d.setdefault("message", "Belum ada keputusan. Pastikan controller LinUCB berjalan di Jetson.")
     d["sigma_kbps"] = SIGMA_KBPS
     return d
 
@@ -161,10 +173,14 @@ def ensure_sampler():
     if time.time() - _last_kick[0] < 20: return
     _last_kick[0] = time.time()
     try:
-        rpi("pgrep -f omr-live.sh >/dev/null || { S=; command -v setsid >/dev/null && S=setsid; "
-            "( $S sh /root/omr-live.sh </dev/null >/dev/null 2>&1 & ) ; }", 15)
-    except Exception:
-        pass
+        rpi("if [ -s /tmp/omr_live.pid ] && "
+            "kill -0 \"$(cat /tmp/omr_live.pid)\" 2>/dev/null && "
+            "tr '\\000' ' ' < \"/proc/$(cat /tmp/omr_live.pid)/cmdline\" 2>/dev/null | "
+            "grep -Fq '/root/omr-live.sh'; then "
+            "exit 0; fi; "
+            "nohup sh /root/omr-live.sh </dev/null >/dev/null 2>&1 &", 15)
+    except Exception as e:
+        print("sampler start failed: %s" % e, file=sys.stderr)
 
 # ---------------- scheduler ----------------
 def sched_status():
@@ -365,7 +381,8 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/live":
             def live():
                 res = omr.omr_live({"since": int(q.get("since", ["0"])[0])})
-                if not res.get("rows"): ensure_sampler()
+                rows, now = res.get("rows") or [], res.get("now") or 0
+                if not rows or (now and now - rows[-1][0] > 10): ensure_sampler()
                 return overlay(res)
             return self.run(live)
         if u.path == "/api/sched": return self.run(sched_status)
