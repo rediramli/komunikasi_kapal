@@ -118,14 +118,19 @@ def main():
     agent = train_policy()
     print(f"{'cycle':>6}{'state':>16}{'rtt1/rtt2':>12}{'-> w pushed':>14}")
     for i in range(a.cycles):
-        if a.demo:
-            label, st = DEMO[i % len(DEMO)]
-        else:
-            label, st = observe(a.cap1, a.cap2)
-        n, w = decide(agent, st)
-        push_w(w, a.ctl)
-        push_decision(decision_snapshot(agent, st, n, w))
-        print(f"{i:>6}{label:>16}{st.rtt1:7.0f}/{st.rtt2:4.0f}{('N=%d w=%.2f' % (n, w)):>14}")
+        # One flaky RPi SSH (observe/push over an unstable tunnel) must not kill the
+        # controller: catch per-cycle errors and skip, so the loop keeps running.
+        try:
+            if a.demo:
+                label, st = DEMO[i % len(DEMO)]
+            else:
+                label, st = observe(a.cap1, a.cap2)
+            n, w = decide(agent, st)
+            push_w(w, a.ctl)
+            push_decision(decision_snapshot(agent, st, n, w))
+            print(f"{i:>6}{label:>16}{st.rtt1:7.0f}/{st.rtt2:4.0f}{('N=%d w=%.2f' % (n, w)):>14}", flush=True)
+        except Exception as e:
+            print(f"{i:>6}  cycle error, skipping: {str(e)[:90]}", flush=True)
         time.sleep(a.period)
     print("done.")
 
