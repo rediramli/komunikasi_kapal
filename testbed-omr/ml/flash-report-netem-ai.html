@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flash Report — Uji Ketangguhan Bonding Adaptif</title>
+<style>
+  :root{
+    --ink:#16202b; --muted:#5b6b7a; --line:#dce3ea; --bg:#ffffff;
+    --accent:#065a82; --accent2:#1c7293; --ok:#1b7f4b; --warn:#b85042;
+    --chip:#eef4f8;
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#e7eef5; --muted:#9fb0bf; --line:#2a3745; --bg:#0f1720;
+      --accent:#56b6e0; --accent2:#7fd3c6; --ok:#58c58c; --warn:#e08a7e;
+      --chip:#17222d;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#e7eef5; --muted:#9fb0bf; --line:#2a3745; --bg:#0f1720;
+    --accent:#56b6e0; --accent2:#7fd3c6; --ok:#58c58c; --warn:#e08a7e; --chip:#17222d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 16px 56px;}
+  header{border-bottom:3px solid var(--accent);padding-bottom:14px;margin-bottom:20px;}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;}
+  h1{font-size:24px;margin:6px 0 6px;line-height:1.2;}
+  .meta{color:var(--muted);font-size:13px;}
+  h2{font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);
+    margin:26px 0 8px;border-left:3px solid var(--accent2);padding-left:9px;}
+  p{margin:8px 0;}
+  .lead{font-size:16px;}
+  ul{margin:8px 0;padding-left:20px;} li{margin:4px 0;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;}
+  th{background:var(--chip);font-weight:700;}
+  code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12.5px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;}
+  .w0{color:var(--ok);font-weight:700;} .wn{color:var(--muted);}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);
+    border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted);margin:2px 4px 2px 0;}
+  .box{border:1px solid var(--line);border-left:3px solid var(--accent);
+    background:var(--chip);border-radius:6px;padding:12px 14px;margin:12px 0;}
+  .box.find{border-left-color:var(--warn);}
+  .box h3{margin:0 0 4px;font-size:14px;}
+  .muted{color:var(--muted);}
+  footer{margin-top:30px;padding-top:12px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:12px;}
+  @media print{body{font-size:12px}.wrap{max-width:none;padding:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">Flash Report · Testbed Komunikasi Kapal</div>
+  <h1>Uji Ketangguhan Bonding Adaptif di Bawah Kondisi Maritim (netem&nbsp;→&nbsp;AI)</h1>
+  <div class="meta">28 Oktober 2026 · Testbed OMR dua-SIM · Edge AI (Jetson Orin NX) · Persiapan Science Week 2026 (2–3 Nov)</div>
+</header>
+
+<p class="lead">Kami menghantam testbed dengan kondisi jaringan maritim buatan (tc&nbsp;netem) dan
+mengamati apakah <strong>otak AI di edge</strong> benar-benar beradaptasi secara real-time. Hasilnya: <strong>ya</strong> —
+AI memindahkan beban trafik menjauh dari SIM yang memburuk, lalu pulih kembali saat kondisi normal.
+Prosesnya juga menyingkap satu temuan arsitektural yang penting untuk paper.</p>
+
+<h2>1. Apa yang diuji</h2>
+<p>Satu SIM (Simba / <code>wan1</code>) sengaja didegradasi dengan profil kondisi maritim,
+sementara SIM lain (Singtel / <code>wan2</code>) dibiarkan sehat. Kami mengamati keputusan
+AI (<strong>LinUCB contextual bandit</strong>) yang berjalan di Jetson: berapa bobot split <code>w</code>
+yang ia pilih, dan alasannya.</p>
+
+<table>
+  <thead><tr><th>Skenario</th><th>Profil impairment (tc netem)</th><th>Analog maritim</th></tr></thead>
+  <tbody>
+    <tr><td>S0</td><td>— (bersih, referensi)</td><td>Di pelabuhan, sinyal baik</td></tr>
+    <tr><td>S1</td><td><code>delay 30ms 10ms, loss 0.5%</code></td><td>Dekat pantai, ringan</td></tr>
+    <tr><td>S2</td><td><code>delay 80ms 30ms, loss 2%, rate 5mbit</code></td><td>Pelabuhan padat</td></tr>
+    <tr><td>S3</td><td><code>delay 150ms 50ms, loss 5%, rate 2mbit</code></td><td>Lepas pantai, lemah</td></tr>
+    <tr><td>S4</td><td><code>delay 300ms 100ms, loss 10%, rate 1mbit</code></td><td>Tepi sel (cell-hopping)</td></tr>
+    <tr><td>S6</td><td><code>delay 600ms 40ms, loss 1%, rate 5mbit</code></td><td>VSAT GEO, latensi tinggi</td></tr>
+  </tbody>
+</table>
+<p class="muted">Profil dikalibrasi terhadap rentang drive-test nyata <strong>PSA Agility</strong>
+(Singtel p50&nbsp;26&nbsp;ms / p90&nbsp;35&nbsp;ms; Simba terdemosi 14% waktu; RTT p99 ≈ 1234&nbsp;ms; loss hingga 66%).</p>
+
+<h2>2. Hasil utama — AI beradaptasi, lalu pulih</h2>
+<p>Contoh satu siklus S4 pada Simba (<code>w</code> = porsi beban ke Simba; <code>w</code>→0 berarti AI
+mengalihkan semua beban ke Singtel):</p>
+<table>
+  <thead><tr><th>Fase</th><th>Yang "dilihat" AI</th><th>Keputusan <code>w</code></th><th>Alasan AI</th></tr></thead>
+  <tbody>
+    <tr><td>Baseline</td><td>rtt Simba 20&nbsp;ms, Singtel 101&nbsp;ms</td><td class="wn">0.25</td><td>Pembagian normal</td></tr>
+    <tr><td>S4 + packet loss</td><td>rtt Simba <strong>300–380&nbsp;ms</strong>, loss 0.6</td><td class="w0">0.00</td><td>Menghindari SIM yang rugi paket</td></tr>
+    <tr><td>S4, delay saja</td><td>rtt Simba 300&nbsp;ms, loss 0</td><td class="wn">0.25</td><td>Menoleransi latensi murni</td></tr>
+    <tr><td>Pulih</td><td>rtt Simba 15&nbsp;ms</td><td class="wn">0.25</td><td>Kembali normal</td></tr>
+  </tbody>
+</table>
+<div class="box">
+  <h3>Perilaku yang terbukti &amp; dapat dijelaskan</h3>
+  <p>AI <strong>meninggalkan SIM saat SIM itu membuang paket</strong>, tetapi <strong>menoleransi latensi tinggi murni</strong>.
+  Ini konsisten dengan fungsi reward <code>goodput − 0.05·latency</code> — kapasitas/paket lebih berbobot daripada latensi.
+  Latensi deteksi–keputusan AI: <strong>1–2 detik</strong> (live, persisten).</p>
+</div>
+
+<h2>3. Temuan arsitektural (penting untuk paper)</h2>
+<div class="box find">
+  <h3>Lapisan transport bereaksi — dan itu menghapus eksperimen kita</h3>
+  <p>Saat netem menaikkan RTT sebuah WAN, <strong>path-tracker OpenMPTCProuter mendeteksinya
+  dan memicu <code>mptcp reload</code></strong>, yang menghapus qdisc netem dalam ≈4 detik. Artinya
+  degradasi "self-defeating": reaksi lapisan transport melenyapkan impairment sebelum sempat diamati.</p>
+  <p><strong>Implikasi:</strong> ini justru bukti langsung bahwa bonding <em>transport-layer</em> (MPTCP) dan
+  <em>application-layer</em> (AI kita) adalah dua pengendali yang berbeda. Untuk menguji AI aplikasi kita
+  secara bersih, kami menahan kondisi dengan <strong>re-assert netem tiap 1 detik</strong> sepanjang jendela uji
+  (mekanisme otomatis, membersihkan diri saat selesai). Setelah itu, degradasi bertahan dan AI aplikasi
+  bereaksi seperti pada Bagian&nbsp;2.</p>
+</div>
+
+<h2>4. Apa artinya untuk makalah</h2>
+<ul>
+  <li><strong>Klaim yang bisa dipertahankan:</strong> pengendali kontekstual (LinUCB) di edge mengubah
+  kebijakan bonding lapisan-aplikasi dalam hitungan detik merespons degradasi per-SIM yang realistis.</li>
+  <li><strong>Pembeda:</strong> keputusan bersifat <em>explainable</em> — setiap aksi disertai alasan
+  (hindari rugi paket / ikuti kapasitas / timbang selisih RTT), bukan kotak hitam.</li>
+  <li><strong>Validitas kondisi:</strong> skenario dikalibrasi ke jejak nyata PSA Agility, bukan angka sembarang.</li>
+  <li><strong>Novelty tambahan:</strong> interaksi dua lapisan pengendali (transport vs aplikasi) terdokumentasi
+  dan terkelola — bahan diskusi arsitektur yang kuat.</li>
+</ul>
+
+<h2>5. Status &amp; langkah lanjut</h2>
+<p>
+  <span class="chip">✓ Pipeline AI live &amp; persisten</span>
+  <span class="chip">✓ Injektor netem S0–S6 (tahan reload OMR)</span>
+  <span class="chip">✓ Auto-restore + guard kontrol</span>
+  <span class="chip">✓ Dashboard menampilkan keputusan AI</span>
+</p>
+<ul>
+  <li>Skenario <strong>dinamis</strong> (D1–D11) yang berubah terhadap waktu — "voyage" penuh.</li>
+  <li><strong>Replay jejak nyata PSA Agility (D10)</strong> — data mentah sudah siap.</li>
+  <li>Pengukuran kuantitatif goodput/stabilitas video selama adaptasi untuk tabel hasil paper.</li>
+</ul>
+
+<footer>
+  Testbed: RPi4 OpenMPTCProuter (OMR 0.63) ↔ VPS, OpenVPN tunnel; bonding aplikasi (sub-stream dipin per IP WAN,
+  reassembly userspace); edge AI di Jetson Orin NX. Kredensial tidak ditampilkan; konfigurasi/kunci tidak di-commit.
+  Dibuat 28 Okt 2026.
+</footer>
+</div>
+</body>
+</html>

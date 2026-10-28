@@ -73,16 +73,16 @@ def jet_status():
     rc, out, err = rpi("if [ -r %s ]; then cat %s; else echo '{\"available\":false}'; fi"
                        % (JET_DECISION, JET_DECISION))
     if rc != 0:
-        raise RuntimeError((err or out).strip()[:200] or "SSH ke RPi gagal saat membaca status Jetson")
+        raise RuntimeError((err or out).strip()[:200] or "SSH to the RPi failed while reading Jetson status")
     try:
         d = json.loads((out or "").strip() or "{}")
     except json.JSONDecodeError as e:
-        raise RuntimeError("berkas keputusan Jetson bukan JSON yang valid") from e
+        raise RuntimeError("the Jetson decision file is not valid JSON") from e
     if not isinstance(d, dict):
-        raise RuntimeError("format berkas keputusan Jetson tidak valid")
+        raise RuntimeError("invalid Jetson decision file format")
     if not d.get("state"):
         d.setdefault("available", False)
-        d.setdefault("message", "Belum ada keputusan. Pastikan controller LinUCB berjalan di Jetson.")
+        d.setdefault("message", "No decision yet. Make sure the LinUCB controller is running on the Jetson.")
     d["sigma_kbps"] = SIGMA_KBPS
     return d
 

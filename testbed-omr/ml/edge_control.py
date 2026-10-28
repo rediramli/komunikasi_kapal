@@ -59,18 +59,18 @@ def decision_snapshot(agent, st, n, w):
     # reason is derived from the chosen w so it always matches the decision; the model
     # weighs goodput (capacity) against latency (RTT) per SIM.
     if w >= 0.6:
-        lean = "lebih banyak beban ke Simba"
+        lean = "more load to Simba"
     elif w <= 0.4:
-        lean = "lebih banyak beban ke Singtel"
+        lean = "more load to Singtel"
     else:
-        lean = "pembagian mendekati seimbang"
+        lean = "split close to balanced"
     driver = []
     if st.loss1 > 0.05 or st.loss2 > 0.05:
-        driver.append("menghindari SIM yang rugi paket")
+        driver.append("avoiding the packet-losing SIM")
     if abs(st.cap1 - st.cap2) > 3:
-        driver.append("mengikuti kapasitas yang lebih besar")
+        driver.append("following the larger capacity")
     if abs(st.rtt1 - st.rtt2) > 40:
-        driver.append("menimbang selisih RTT")
+        driver.append("weighing the RTT difference")
     reason = lean + (" — " + ", ".join(driver) if driver else "")
     return {"ts": time.time(),
             "state": {"cap1": round(st.cap1, 1), "cap2": round(st.cap2, 1),

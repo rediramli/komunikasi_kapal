@@ -373,39 +373,39 @@ tbody tr:hover td{background:var(--surface-2)}
 
 <div class="wrap" id="app">
   <header>
-    <div class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h6l4 6-4 6H2" fill="none" stroke="var(--simba)" stroke-width="2.2"/><path d="M8 6h0l4 6h10" fill="none" stroke="var(--singtel)" stroke-width="2.2"/><path d="M8 18l4-6" fill="none" stroke="var(--singtel)" stroke-width="2.2"/></svg><h1>Bondline<span class="prod">Konsol Kembar</span></h1><span class="site">KAPAL GW-01 · RPi OMR → VPS SG</span><span class="ver">v3.0</span></div>
-    <p class="sub">Dua kamera dari gateway RPi OMR ke VPS melalui dua link seluler, digabung di edge <b>Jetson (AI/ML)</b>: controller LinUCB mengamati tiap SIM dan membagi beban secara langsung.</p>
+    <div class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h6l4 6-4 6H2" fill="none" stroke="var(--simba)" stroke-width="2.2"/><path d="M8 6h0l4 6h10" fill="none" stroke="var(--singtel)" stroke-width="2.2"/><path d="M8 18l4-6" fill="none" stroke="var(--singtel)" stroke-width="2.2"/></svg><h1>Bondline<span class="prod">Twin Console</span></h1><span class="site">KAPAL GW-01 · RPi OMR → VPS SG</span><span class="ver">v3.0</span></div>
+    <p class="sub">Two cameras from the RPi OMR gateway to the VPS over two cellular links, bonded at the <b>Jetson (AI/ML)</b> edge: a LinUCB controller watches each SIM and splits the load live.</p>
     <span class="spacer"></span>
-    <span class="conn" id="conn" data-s="wait" role="status" aria-live="polite" title="Status feed dan diagnosis tersedia saat mode langsung terhubung."><i></i><span id="conntxt">Menghubungkan…</span></span>
-    <button id="themebtn" class="icon" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema (T)">☀</button>
+    <span class="conn" id="conn" data-s="wait" role="status" aria-live="polite" title="Feed status and diagnostics are available when live mode is connected."><i></i><span id="conntxt">Connecting…</span></span>
+    <button id="themebtn" class="icon" type="button" aria-label="Toggle light/dark theme" title="Toggle theme (T)">☀</button>
   </header>
 
   <div class="colL">
   <div class="panel bar">
     <label for="preset">Data</label>
     <select id="preset"></select>
-    <span class="filebtn" role="button" tabindex="0">Muat hasil uji…<input id="file" type="file" accept=".gz,.tgz,.csv,.txt" multiple></span>
-    <button id="starttest" hidden>Mulai uji otomatis (7 mnt)</button>
+    <span class="filebtn" role="button" tabindex="0">Load test results…<input id="file" type="file" accept=".gz,.tgz,.csv,.txt" multiple></span>
+    <button id="starttest" hidden>Start auto test (7 min)</button>
     <span id="msg"></span>
     <span class="spacer"></span>
-    <button id="play" aria-label="Putar atau jeda">▶ Putar</button>
-    <span role="group" aria-label="Kecepatan" id="speeds"></span>
+    <button id="play" aria-label="Play or pause">▶ Play</button>
+    <span role="group" aria-label="Speed" id="speeds"></span>
     <span class="clock" id="clock">--:--:--</span>
   </div>
 
   <div class="panel video v-mon" id="videop">
     <div class="bar">
-      <label>Kamera</label>
-      <span role="group" aria-label="Pemutar" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
-      <button id="vreload">Muat ulang</button>
-      <button id="vtoggle">Sembunyikan</button>
+      <label>Camera</label>
+      <span role="group" aria-label="Player" id="vproto"><button data-p="hls" class="on">HLS</button><button data-p="webrtc">WebRTC</button></span>
+      <button id="vreload">Reload</button>
+      <button id="vtoggle">Hide</button>
       <span class="spacer"></span>
       <span id="vnote" class="note" style="margin:0"></span>
     </div>
     <div class="vgrid" id="vgrid">
       <div class="vcell">
         <div class="vlab"><span class="tag">CAM 1</span>
-          <select id="vpathA" aria-label="Sumber kamera 1">
+          <select id="vpathA" aria-label="Camera 1 source">
             <option value="dlink">dlink · D-Link main</option>
             <option value="dlink_sub">dlink_sub · D-Link sub</option>
             <option value="dlink_mp">dlink_mp · D-Link via Jetson</option>
@@ -413,11 +413,11 @@ tbody tr:hover td{background:var(--surface-2)}
             <option value="hik_sub">hik_sub · Hikvision sub</option>
             <option value="live/cam">live/cam · C270 (RTMP)</option>
           </select></div>
-        <div class="vbox"><iframe id="vframeA" title="Kamera 1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgA" hidden></div></div>
+        <div class="vbox"><iframe id="vframeA" title="Camera 1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgA" hidden></div></div>
       </div>
       <div class="vcell">
         <div class="vlab"><span class="tag">CAM 2</span>
-          <select id="vpathB" aria-label="Sumber kamera 2">
+          <select id="vpathB" aria-label="Camera 2 source">
             <option value="dlink">dlink · D-Link main</option>
             <option value="dlink_sub">dlink_sub · D-Link sub</option>
             <option value="dlink_mp">dlink_mp · D-Link via Jetson</option>
@@ -425,19 +425,19 @@ tbody tr:hover td{background:var(--surface-2)}
             <option value="hik_sub">hik_sub · Hikvision sub</option>
             <option value="live/cam">live/cam · C270 (RTMP)</option>
           </select></div>
-        <div class="vbox"><iframe id="vframeB" title="Kamera 2" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgB" hidden></div></div>
+        <div class="vbox"><iframe id="vframeB" title="Camera 2" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe><div class="vmsg" id="vmsgB" hidden></div></div>
       </div>
     </div>
   </div>
 
   <div class="panel sched v-kpi" id="schedp" hidden>
     <div class="bar">
-      <label for="schedsel">Penjadwal</label>
+      <label for="schedsel">Scheduler</label>
       <select id="schedsel"></select>
-      <span class="chip" id="schedcur">aktif: –</span>
-      <button id="schedapply">Terapkan</button>
-      <button id="schedtest" class="primary">Terapkan + uji otomatis 7 mnt</button>
-      <button id="scheddef">Kembali ke bawaan</button>
+      <span class="chip" id="schedcur">active: –</span>
+      <button id="schedapply">Apply</button>
+      <button id="schedtest" class="primary">Apply + auto test 7 min</button>
+      <button id="scheddef">Reset to default</button>
       <span id="schedmsg"></span>
     </div>
     <p class="desc" id="scheddesc"></p>
@@ -446,9 +446,9 @@ tbody tr:hover td{background:var(--surface-2)}
   <div class="panel sched v-mon" id="vpnp" hidden>
     <div class="bar">
       <label for="vpnsel">Transport</label>
-      <select id="vpnsel"><option value="">Memuat daftar transport…</option></select>
+      <select id="vpnsel"><option value="">Loading transport list…</option></select>
       <span class="chip" id="vpncur">–</span>
-      <button id="vpnapply" class="primary">Ganti</button>
+      <button id="vpnapply" class="primary">Switch</button>
       <span id="vpnmsg"></span>
     </div>
     <p class="desc" id="vpndesc"></p>
@@ -457,80 +457,80 @@ tbody tr:hover td{background:var(--surface-2)}
   <div class="panel sched v-mon" id="linkp" hidden>
     <div class="bar">
       <label>Link</label>
-      <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Putus</button></span>
-      <span class="lk"><i style="background:var(--singtel)"></i>Singtel <button class="cut" id="cut2" data-dev="wan2">Putus</button></span>
-      <label for="cutsecs">pulih otomatis setelah</label>
-      <select id="cutsecs"><option value="60">1 mnt</option><option value="120" selected>2 mnt</option><option value="300">5 mnt</option><option value="600">10 mnt</option></select>
+      <span class="lk"><i style="background:var(--simba)"></i>Simba <button class="cut" id="cut1" data-dev="wan1">Cut</button></span>
+      <span class="lk"><i style="background:var(--singtel)"></i>Singtel <button class="cut" id="cut2" data-dev="wan2">Cut</button></span>
+      <label for="cutsecs">auto-restore after</label>
+      <select id="cutsecs"><option value="60">1 min</option><option value="120" selected>2 min</option><option value="300">5 min</option><option value="600">10 min</option></select>
       <span class="spacer"></span>
-      <label>Jalur utama</label>
-      <span role="group" aria-label="Jalur utama" id="prio"><button data-m="auto">Keduanya</button><button data-m="simba">Simba dulu</button><button data-m="singtel">Singtel dulu</button></span>
+      <label>Primary path</label>
+      <span role="group" aria-label="Primary path" id="prio"><button data-m="auto">Both</button><button data-m="simba">Simba first</button><button data-m="singtel">Singtel first</button></span>
     </div>
-    <p class="desc"><span id="linkmsg"></span> Tombol <b>Putus</b> menghentikan trafik pada link tersebut (seperti kehilangan sinyal seluler); link pulih otomatis setelah waktu yang dipilih. Hanya satu link yang dapat diputus agar REDLAB tetap dapat mengakses RPi. <b>Jalur utama</b> mengatur penanda cadangan MPTCP tanpa memulai ulang tunnel.</p>
+    <p class="desc"><span id="linkmsg"></span> The <b>Cut</b> button stops traffic on that link (like losing cellular signal); the link auto-restores after the chosen time. Only one link can be cut so REDLAB keeps access to the RPi. <b>Primary path</b> sets the MPTCP backup flag without restarting the tunnel.</p>
   </div>
 
   <div class="panel jet v-kpi" id="jetp" hidden>
-    <div class="jhead"><h2>Agregasi bonding · otak Jetson</h2><span class="jchips"><span class="chip aistat" id="jai">AI –</span><span class="chip" id="jwcur">w=0.50</span></span></div>
+    <div class="jhead"><h2>Bonding aggregation · Jetson brain</h2><span class="jchips"><span class="chip aistat" id="jai">AI –</span><span class="chip" id="jwcur">w=0.50</span></span></div>
     <div class="jstat">
-      <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Laju data total</div></div>
-      <div class="jk eff"><div class="jkv" id="keff">–</div><div class="jkl">Efisiensi agregasi</div></div>
-      <div class="jk"><div class="jkv" id="ksig">–</div><div class="jkl">Kapasitas 2 SIM</div></div>
+      <div class="jk tot"><div class="jkv" id="ktot">–</div><div class="jkl">Total data rate</div></div>
+      <div class="jk eff"><div class="jkv" id="keff">–</div><div class="jkl">Aggregation efficiency</div></div>
+      <div class="jk"><div class="jkv" id="ksig">–</div><div class="jkl">2-SIM capacity</div></div>
     </div>
     <div class="splitbar" aria-hidden="true"><span id="sbar1" style="width:50%"></span><span id="sbar2" style="width:50%"></span></div>
     <div class="splitlab"><span class="s1" id="slab1">Simba 50%</span><span class="s2" id="slab2">Singtel 50%</span></div>
     <div class="jspark">
-      <div class="cap"><span><b>Keputusan pembagian AI</b> (w) · langsung</span><span>atas = Simba · bawah = Singtel</span></div>
-      <canvas id="jwspark" height="46" aria-label="Riwayat keputusan split w dari controller AI Jetson"></canvas>
+      <div class="cap"><span><b>AI split decision</b> (w) · live</span><span>top = Simba · bottom = Singtel</span></div>
+      <canvas id="jwspark" height="46" aria-label="History of split-w decisions from the Jetson AI controller"></canvas>
     </div>
     <div class="jrow">
-      <span role="group" aria-label="Pembagian beban" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Seimbang</button><button data-w="0.0">Singtel</button></span>
-      <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Pembagian beban ke Simba">
-      <button id="jload" class="primary">Uji beban 30 dtk</button>
+      <span role="group" aria-label="Load split" id="jsplit"><button data-w="1.0">Simba</button><button data-w="0.5" class="on">Balanced</button><button data-w="0.0">Singtel</button></span>
+      <input type="range" id="jslider" min="0" max="100" value="50" aria-label="Load split to Simba">
+      <button id="jload" class="primary">Load test 30 s</button>
     </div>
-    <p class="desc"><span id="jmsg"></span>Geser untuk mengatur pembagian beban kamera ke dua SIM, atau biarkan Jetson yang memutuskan. <b>Uji beban</b> mendorong trafik bitrate tinggi ~30 dtk agar dua SIM terisi penuh dan agregasi terlihat (memakai kuota seluler).</p>
+    <p class="desc"><span id="jmsg"></span>Drag to set how the camera load is split across the two SIMs, or let the Jetson decide. <b>Load test</b> pushes high-bitrate traffic for ~30 s so both SIMs fill up and the aggregation is visible (uses cellular data).</p>
   </div>
 
   </div><!--/colL-->
 
   <div class="colM">
   <div class="panel v-mon" id="stage">
-    <canvas id="diag" width="1160" height="460" aria-label="Diagram aliran dari RPi ke VPS melalui dua link"></canvas>
-    <span class="status st-fo" id="status">Menunggu data</span>
-    <div class="empty" id="empty"><div class="spin" aria-hidden="true"></div><b>Menunggu data live dari RPi…</b><span id="emptysub">Sampel 1 Hz diambil lewat SSH dari REDLAB</span></div>
+    <canvas id="diag" width="1160" height="460" aria-label="Flow diagram from RPi to VPS over two links"></canvas>
+    <span class="status st-fo" id="status">Waiting for data</span>
+    <div class="empty" id="empty"><div class="spin" aria-hidden="true"></div><b>Waiting for live data from the RPi…</b><span id="emptysub">1 Hz samples pulled over SSH from REDLAB</span></div>
   </div>
 
   <div class="readouts v-mon">
     <div class="panel ro" style="--c:var(--simba)"><div class="k"><span class="sw" style="background:var(--simba)"></span>Simba · RUTM30 (wan1)</div><div class="v" id="v1">0 <small>kbps</small></div><div class="chips" id="c1"></div></div>
     <div class="panel ro" style="--c:var(--singtel)"><div class="k"><span class="sw" style="background:var(--singtel)"></span>Singtel · RUTM16 (wan2)</div><div class="v" id="v2">0 <small>kbps</small></div><div class="chips" id="c2"></div></div>
-    <div class="panel ro" style="--c:var(--accent)">    <div class="k"><span class="sw" style="background:var(--ink)"></span>Total ke VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
+    <div class="panel ro" style="--c:var(--accent)">    <div class="k"><span class="sw" style="background:var(--ink)"></span>Total to VPS</div><div class="v" id="v3">0 <small>kbps</small></div><div class="chips" id="c3"></div></div>
   </div>
 
   <div class="panel tlwrap v-kpi">
-    <canvas id="tl" width="1160" height="190" aria-label="Unggahan per link dari waktu ke waktu"></canvas>
+    <canvas id="tl" width="1160" height="190" aria-label="Uplink per link over time"></canvas>
     <div class="tip" id="tltip" hidden></div>
     <div class="legend">
-      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (agregat)</span>
+      <span><i class="lg-line" style="background:var(--ink);height:3px"></i>Total (aggregate)</span>
       <span><i class="lg-line" style="background:var(--simba)"></i>Simba · kbps</span>
       <span><i class="lg-line" style="background:var(--singtel)"></i>Singtel · kbps</span>
-      <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i><span id="stalllbl">macet</span></span>
-      <span><i class="lg-box" style="background:var(--grid)"></i>link terputus</span>
-      <span id="tlhint">Seret grafik untuk menelusuri waktu</span>
+      <span><i class="lg-box" style="background:color-mix(in srgb,var(--stall) 22%,transparent)"></i><span id="stalllbl">stalled</span></span>
+      <span><i class="lg-box" style="background:var(--grid)"></i>link down</span>
+      <span id="tlhint">Drag the chart to scrub time</span>
     </div>
     <div class="tlctl" id="tlctl" hidden>
-      <span role="group" aria-label="Rentang waktu" id="tlspan"><button data-s="120">2 mnt</button><button data-s="300" class="on">5 mnt</button><button data-s="900">15 mnt</button><button data-s="3600">1 jam</button><button data-s="0">Semua</button></span>
-      <input type="range" id="tlpos" min="0" max="1000" value="1000" aria-label="Gulir lini masa">
+      <span role="group" aria-label="Time range" id="tlspan"><button data-s="120">2 min</button><button data-s="300" class="on">5 min</button><button data-s="900">15 min</button><button data-s="3600">1 hr</button><button data-s="0">All</button></span>
+      <input type="range" id="tlpos" min="0" max="1000" value="1000" aria-label="Scroll timeline">
       <span class="pos" id="tlposlbl"></span>
-      <button id="tlfollow" class="on">● Ikuti langsung</button>
+      <button id="tlfollow" class="on">● Follow live</button>
     </div>
   </div>
 
   <div class="panel latwrap v-kpi">
-    <h2>Latensi · RTT ke VPS per SIM</h2>
-    <canvas id="lat" width="1160" height="150" aria-label="Latensi pulang-pergi tiap SIM dari waktu ke waktu"></canvas>
+    <h2>Latency · RTT to VPS per SIM</h2>
+    <canvas id="lat" width="1160" height="150" aria-label="Round-trip latency per SIM over time"></canvas>
     <div class="legend">
       <span><i class="lg-line" style="background:var(--simba)"></i>RTT Simba</span>
       <span><i class="lg-line" style="background:var(--singtel)"></i>RTT Singtel</span>
       <span><i class="lg-line" style="background:var(--ink)"></i>RTT tunnel</span>
-      <span class="note">ms · lebih rendah lebih baik · jeda = paket hilang</span>
+      <span class="note">ms · lower is better · gap = packet loss</span>
     </div>
   </div>
 
@@ -538,43 +538,43 @@ tbody tr:hover td{background:var(--surface-2)}
 
   <div class="colR">
   <div class="panel aiwork" id="aiwork" hidden>
-    <div class="jhead"><h2>Cara kerja otak AI · LinUCB</h2><span class="chip" id="aists">–</span></div>
+    <div class="jhead"><h2>How the AI brain works · LinUCB</h2><span class="chip" id="aists">–</span></div>
     <div class="aistep"><div class="num">1</div><div>
-      <div class="st">Amati kondisi tiap SIM (langsung)</div>
+      <div class="st">Observe each SIM’s condition (live)</div>
       <div class="aiobs"><span class="s1">Simba</span><span class="v" id="ai_s1">RTT – · cap –</span></div>
       <div class="aiobs"><span class="s2">Singtel</span><span class="v" id="ai_s2">RTT – · cap –</span></div>
     </div></div>
     <div class="aistep"><div class="num">2</div><div>
-      <div class="st">Nilai tiap pilihan split (skor yang dipelajari)</div>
+      <div class="st">Score each split option (learned value)</div>
       <div class="cand" id="ai_cand"></div>
     </div></div>
     <div class="aistep"><div class="num">3</div><div>
-      <div class="st">Tentukan &amp; terapkan</div>
+      <div class="st">Decide &amp; apply</div>
       <div class="aidecide"><span class="wbig" id="ai_w">w=–</span><span class="nsub" id="ai_n"></span></div>
       <div class="aiwhy" id="ai_why"></div>
     </div></div>
-    <p class="note">Model LinUCB: tiap detik ia menilai 25 aksi (jumlah sub-stream × split) dari kondisi SIM, lalu memilih skor tertinggi — pembagian beban jadi adaptif, bukan tetap.</p>
+    <p class="note">LinUCB model: every second it scores 25 actions (number of sub-streams × split) from the SIM state, then picks the highest score — the load split becomes adaptive, not fixed.</p>
   </div>
 
   <div class="cols v-mon">
-    <div class="panel"><h2>Kejadian</h2><ol class="ev" id="events"><li class="emptyrow">Belum ada kejadian. Pemutusan link dan langkah uji otomatis akan muncul di sini.</li></ol><p class="note" id="pnote"></p></div>
-    <div class="panel"><h2>Ringkasan per kejadian</h2><div class="tbl"><table><thead><tr><th>Kejadian</th><th>Waktu</th><th>Macet terlama</th><th>Terdeteksi OMR</th></tr></thead><tbody id="sum"><tr><td colspan="4" class="emptyrow">Belum ada kejadian untuk diringkas.</td></tr></tbody></table></div>
-      <p class="note">“Macet” = detik berurutan saat unggahan total di bawah ambang setelah kejadian. Antrean RPi adalah perkiraan model (bitrate kamera konstan dikurangi data terkirim), bukan hasil pengukuran.</p></div>
+    <div class="panel"><h2>Events</h2><ol class="ev" id="events"><li class="emptyrow">No events yet. Link cuts and auto-test steps will appear here.</li></ol><p class="note" id="pnote"></p></div>
+    <div class="panel"><h2>Per-event summary</h2><div class="tbl"><table><thead><tr><th>Event</th><th>Time</th><th>Longest stall</th><th>OMR detected</th></tr></thead><tbody id="sum"><tr><td colspan="4" class="emptyrow">No events to summarize yet.</td></tr></tbody></table></div>
+      <p class="note">“Stalled” = consecutive seconds where the total uplink is below threshold after an event. The RPi queue is a model estimate (constant camera bitrate minus data sent), not a measurement.</p></div>
   </div>
 
   <div class="panel cmp v-kpi" id="cmpp" hidden>
-    <div class="hd"><h2>Perbandingan penjadwal</h2><span class="spacer"></span><button id="cmpcsv">Ekspor CSV</button><button id="cmpclear">Hapus tabel</button></div>
-    <div class="tbl"><table><thead><tr><th>Penjadwal</th><th>Mulai (UTC)</th><th>Durasi</th><th>Rata-rata TP (kbps)</th><th>Simba / Singtel</th><th>Detik macet</th><th>Macet terlama</th><th>2 sub-alur tunnel</th><th>Link terputus</th></tr></thead><tbody id="cmpb"></tbody></table></div>
-    <p class="note">Satu baris = satu periode penjadwal sejak diterapkan. <b>25 detik pertama</b> setelah pergantian (tunnel OpenVPN dimulai ulang) tidak dihitung. Hijau = nilai terbaik di kolomnya. Tabel tersimpan di peramban dan tetap ada setelah halaman dimuat ulang. Bandingkan baris dengan kondisi sama (kolom “Link terputus”).</p>
+    <div class="hd"><h2>Scheduler comparison</h2><span class="spacer"></span><button id="cmpcsv">Export CSV</button><button id="cmpclear">Clear table</button></div>
+    <div class="tbl"><table><thead><tr><th>Scheduler</th><th>Start (UTC)</th><th>Duration</th><th>Avg TP (kbps)</th><th>Simba / Singtel</th><th>Stall seconds</th><th>Longest stall</th><th>Tunnel 2 subflows</th><th>Link down</th></tr></thead><tbody id="cmpb"></tbody></table></div>
+    <p class="note">One row = one scheduler period since it was applied. The <b>first 25 seconds</b> after a switch (OpenVPN tunnel restart) are not counted. Green = best value in its column. The table is saved in the browser and persists across reloads. Compare rows with the same condition (the “Link down” column).</p>
   </div>
   </div><!--/colR-->
   <footer class="sbar" aria-label="Status bar">
     <span><i class="led" id="sb_led"></i><b>DATA</b> <em id="sb_feed">–</em></span>
-    <span><b>JADWAL</b> <em id="sb_sched">–</em></span>
+    <span><b>SCHEDULE</b> <em id="sb_sched">–</em></span>
     <span><b>TRANSPORT</b> <em id="sb_vpn">–</em></span>
     <span><b>AI</b> <em id="sb_ai">–</em></span>
     <span class="spacer"></span>
-    <span><b>AMBANG MACET</b> <em id="sb_thr">–</em></span>
+    <span><b>STALL THR</b> <em id="sb_thr">–</em></span>
     <span><b>UTC</b> <em id="sb_utc">–</em></span>
   </footer>
 </div>
@@ -583,7 +583,7 @@ tbody tr:hover td{background:var(--surface-2)}
 <script>
 const PRESETS = [];   // old test history not shown; page opens straight in LIVE
 let STALL = 5;   // 25% of observed positive traffic, capped at 500 kbps.
-function setBase(v){ D.base=Math.max(0,Number(v)||0); STALL=D.base?Math.max(5,Math.min(500,Math.round(D.base*0.25))):5; const l=document.getElementById('stalllbl'); if(l) l.textContent='macet (< '+STALL+' kbps)'; }
+function setBase(v){ D.base=Math.max(0,Number(v)||0); STALL=D.base?Math.max(5,Math.min(500,Math.round(D.base*0.25))):5; const l=document.getElementById('stalllbl'); if(l) l.textContent='stalled (< '+STALL+' kbps)'; }
 function niceMax(v){ const p=Math.pow(10,Math.floor(Math.log10(v))), m=v/p; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; }
 const kfmt=v=>Math.round(v)+' kbps';
 const $ = id => document.getElementById(id);
@@ -628,11 +628,11 @@ function setData(d){
 function fmt(s){ s=Math.max(0,Math.round(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 
 PRESETS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; $('preset').appendChild(o); });
-{ const o=document.createElement('option'); o.value='live'; o.textContent='● LANGSUNG · RPi OMR'; $('preset').prepend(o); }
+{ const o=document.createElement('option'); o.value='live'; o.textContent='● LIVE · RPi OMR'; $('preset').prepend(o); }
 $('preset').onchange=e=>{ stopLive(); if(e.target.value==='live') startLive(); else setData(JSON.parse(JSON.stringify(PRESETS[e.target.value]))); };
 [1,4,10].forEach(s=>{ const b=document.createElement('button'); b.textContent=s+'×'; b.className=s===speed?'on':''; b.onclick=()=>{speed=s; [...$('speeds').children].forEach(x=>x.className=x===b?'on':'');}; $('speeds').appendChild(b); });
-$('play').onclick=()=>{ playing=!playing; if(playing && cur>=D.rows[D.rows.length-1][0]) cur=0; $('play').textContent=playing?'❚❚ Jeda':'▶ Putar'; };
-$('play').textContent=playing?'❚❚ Jeda':'▶ Putar';
+$('play').onclick=()=>{ playing=!playing; if(playing && cur>=D.rows[D.rows.length-1][0]) cur=0; $('play').textContent=playing?'❚❚ Pause':'▶ Play'; };
+$('play').textContent=playing?'❚❚ Pause':'▶ Play';
 
 /* ---------- file loading (fotest_*.tar.gz, traffic.csv, marks.csv) ---------- */
 function untar(u8){ const files={}; let o=0; const td=new TextDecoder();
@@ -650,7 +650,7 @@ function parseTraffic(txt){
   const start=ep(raw[0]);
   return {start, rows:raw.map(r=>[ep(r)-start,+r[iA],+r[iB],r[iSA]==='up'?1:0,r[iSB]==='up'?1:0])};
 }
-function labelEn(l){ return l.replace(/\s*\[auto:[^\]]*\]/,'').replace(/\b(CABUT|DOWN)\b/i,'Putus').replace(/\b(COLOK|UP)\b/i,'Pulih').trim()+(l.includes('[auto:')?' (otomatis)':''); }
+function labelEn(l){ return l.replace(/\s*\[auto:[^\]]*\]/,'').replace(/\b(CABUT|DOWN)\b/i,'Cut').replace(/\b(COLOK|UP)\b/i,'Restored').trim()+(l.includes('[auto:')?' (auto)':''); }
 function eventsFrom(f, start){
   const plan=(f['plan.txt']||'').split(/\r?\n/).filter(Boolean).map(l=>{const [o,...lab]=l.split('|'); return {t:+o,label:lab.join('|')};});
   const marks=(f['marks.csv']||'').split(/\r?\n/).filter(Boolean).map(l=>+l.split(',')[0]-start);
@@ -671,8 +671,8 @@ async function loadFiles(list){
     const name=list[0].name.replace(/\.(tar\.gz|tgz|csv)$/,'');
     const d={name, note:'Loaded from '+list[0].name, start, rows:tr.rows, events:eventsFrom(f,start)};
     const o=document.createElement('option'); o.value=PRESETS.length; o.textContent=name; PRESETS.push(d); $('preset').appendChild(o); $('preset').value=o.value;
-    setData(JSON.parse(JSON.stringify(d))); $('msg').textContent=`Dimuat: ${tr.rows.length} dtk, ${d.events.length} kejadian.`;
-  }catch(err){ $('msg').textContent='Gagal memuat: '+err.message; }
+    setData(JSON.parse(JSON.stringify(d))); $('msg').textContent=`Loaded: ${tr.rows.length} s, ${d.events.length} events.`;
+  }catch(err){ $('msg').textContent='Load failed: '+err.message; }
 }
 $('file').onchange=e=>loadFiles([...e.target.files]);
 document.querySelector('.filebtn').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('file').click(); } };
@@ -734,12 +734,12 @@ function drawDiagram(row, dtReal){
   for(const [p,col,cut,kb,name] of pipes){ const m=p[2];
     node(m, name.split(' · ')[1], name.split(' · ')[0]+' · '+Math.round(kb)+' kbps',{stroke:cut?stall:col});
     if(cut){ cx.strokeStyle=stall; cx.lineWidth=3; const s=G.narrow?7:9, x=m.x+(G.narrow?44:72), y=m.y; cx.beginPath(); cx.moveTo(x-s,y-s); cx.lineTo(x+s,y+s); cx.moveTo(x+s,y-s); cx.lineTo(x-s,y+s); cx.stroke();
-      cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='left'; cx.fillText('DICABUT',x+s+4,y); }
+      cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='left'; cx.fillText('CUT',x+s+4,y); }
   }
-  if(!G.narrow){ node(G.cam,'Kamera','aliran'); node(G.view,'Pemirsa','HLS/RTSP'); } node(G.rpi,'RPi OMR',G.narrow?'+ kamera':'MPTCP'); node(G.vps,'VPS DO',G.narrow?'+ pemirsa':'MediaMTX');
+  if(!G.narrow){ node(G.cam,'Camera','flow'); node(G.view,'Viewer','HLS/RTSP'); } node(G.rpi,'RPi OMR',G.narrow?'+ cameras':'MPTCP'); node(G.vps,'VPS DO',G.narrow?'+ viewer':'MediaMTX');
   // queue (model)
   if(queue>3000){ const kb=Math.round(queue/8); cx.fillStyle=stall; cx.font=`600 ${G.narrow?10:12}px ${css('--sans')}`; cx.textAlign='center';
-    cx.fillText(`antrean ≈ ${kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB'}`, G.rpi.x, G.rpi.y+(G.narrow?34:44)); }
+    cx.fillText(`queue ≈ ${kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB'}`, G.rpi.x, G.rpi.y+(G.narrow?34:44)); }
   // share labels on pipes
   cx.font=`500 ${G.narrow?10:12}px ${css('--mono')}`; cx.textAlign='center'; cx.fillStyle=mut;
   const sh1= tot>0? Math.round(a/tot*100):0;
@@ -807,7 +807,7 @@ function drawLat(){
   lc.strokeStyle=css('--grid'); lc.lineWidth=1; lc.fillStyle=css('--muted'); lc.font=`11px ${css('--mono')}`; lc.textAlign='right'; lc.textBaseline='middle';
   const step= ymax>400?100: ymax>150?50:25;
   for(let v=0;v<=ymax;v+=step){ lc.beginPath(); lc.moveTo(l,Y(v)); lc.lineTo(w-r,Y(v)); lc.stroke(); lc.fillText(v,l-6,Y(v)); }
-  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('menunggu sampel latensi…',w/2,h/2); return; }
+  if(!has){ lc.fillStyle=css('--muted'); lc.textAlign='center'; lc.textBaseline='middle'; lc.fillText('waiting for latency samples…',w/2,h/2); return; }
   [[9,css('--simba'),1.5],[10,css('--singtel'),1.5],[11,css('--ink'),2]].forEach(([i,col,lw])=>{
     lc.strokeStyle=col; lc.lineWidth=lw; lc.beginPath(); let pen=false;
     rows.forEach(x=>{ const v=x[i]; if(v==null||v<0){ pen=false; return; } const px=X(x[0]),py=Y(v); pen?lc.lineTo(px,py):lc.moveTo(px,py); pen=true; }); lc.stroke(); });
@@ -843,7 +843,7 @@ function tlTip(){ const tip=$('tltip'); if(!tip) return;
   setHTML(tip,`<b>${D.live?hms(D.start+x[0])+' UTC':'+'+fmt(x[0])+' · '+hms(D.start+x[0])+' UTC'}</b>`+
     it('var(--ink)','Total',bw(x[1]+x[2]))+it('var(--simba)','Simba',bw(x[1]))+it('var(--singtel)','Singtel',bw(x[2]))+
     (x.length>9? it('var(--simba)','RTT Simba',ms(x[9]))+it('var(--singtel)','RTT Singtel',ms(x[10]))+it('var(--ink)','RTT tunnel',ms(x[11])) : '')+
-    (isStalled(x[1]+x[2])?'<span style="color:var(--stall)">● macet</span><em></em>':''));
+    (isStalled(x[1]+x[2])?'<span style="color:var(--stall)">● stalled</span><em></em>':''));
   tip.hidden=false; const tw=tip.offsetWidth; let left=tv.offsetLeft+TL.hx+14; if(TL.hx+14+tw>TL.w) left=tv.offsetLeft+TL.hx-14-tw;
   tip.style.left=Math.max(4,left)+'px'; tip.style.top=(tv.offsetTop+8)+'px'; }
 
@@ -855,19 +855,19 @@ function readouts(row){
   setHTML($('v1'),bw(a)); setHTML($('v2'),bw(b)); setHTML($('v3'),bw(tot));
   jetKPI(a,b);
   const c1=phys(cur,1), c2=phys(cur,2);
-  const tun=row.length>=7, t1=tun?[['Sub-alur '+(row[5]?'ada':'hilang'),row[5]?'ok':'bad']]:[], t2=tun?[['Sub-alur '+(row[6]?'ada':'hilang'),row[6]?'ok':'bad']]:[];
-  const rttc=v=>(v==null)?null:(v<0?['RTT hilang','bad']:['RTT '+v+' ms']);
+  const tun=row.length>=7, t1=tun?[['Subflow '+(row[5]?'present':'lost'),row[5]?'ok':'bad']]:[], t2=tun?[['Subflow '+(row[6]?'present':'lost'),row[6]?'ok':'bad']]:[];
+  const rttc=v=>(v==null)?null:(v<0?['RTT lost','bad']:['RTT '+v+' ms']);
   const q1=rttc(row[9]), q2=rttc(row[10]), qt=rttc(row[11]);
-  chips($('c1'),[[c1?'link putus':'link aktif',c1?'bad':'ok'],['OMR '+(row[3]?'aktif':'mati'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'%'],...(q1?[q1]:[]),...t1]);
-  chips($('c2'),[[c2?'link putus':'link aktif',c2?'bad':'ok'],['OMR '+(row[4]?'aktif':'mati'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'%'],...(q2?[q2]:[]),...t2]);
+  chips($('c1'),[[c1?'link down':'link up',c1?'bad':'ok'],['OMR '+(row[3]?'on':'off'),row[3]?'':'bad'],[(tot?Math.round(a/tot*100):0)+'%'],...(q1?[q1]:[]),...t1]);
+  chips($('c2'),[[c2?'link down':'link up',c2?'bad':'ok'],['OMR '+(row[4]?'on':'off'),row[4]?'':'bad'],[(tot?Math.round(b/tot*100):0)+'%'],...(q2?[q2]:[]),...t2]);
   const stalled=isStalled(tot);
   const sc = D.live && SC.log.length ? schedAt(D.start+row[0]).name : null;
-  chips($('c3'),[[D.base<=0?'Aliran belum aktif':stalled?'MACET':'Mengalir',stalled?'bad':D.base>0?'ok':''],['dasar '+Math.round(D.base)+' kbps'],...(qt?[qt]:[]),...(sc?[['jadwal: '+sc]]:[])]);
+  chips($('c3'),[[D.base<=0?'Flow not active':stalled?'STALLED':'Flowing',stalled?'bad':D.base>0?'ok':''],['base '+Math.round(D.base)+' kbps'],...(qt?[qt]:[]),...(sc?[['sched: '+sc]]:[])]);
   const st=$('status');
-  if(D.base<=0){ st.textContent='Aliran belum aktif'; st.className='status st-fo'; }
-  else if(stalled){ st.textContent='Macet · aliran berhenti'; st.className='status st-stall'; }
-  else if(c1||c2){ st.textContent='Pengalihan · 1 link'; st.className='status st-fo'; }
-  else { st.textContent='Normal · 2 link'; st.className='status st-ok'; }
+  if(D.base<=0){ st.textContent='Flow not active'; st.className='status st-fo'; }
+  else if(stalled){ st.textContent='Stalled · flow stopped'; st.className='status st-stall'; }
+  else if(c1||c2){ st.textContent='Failover · 1 link'; st.className='status st-fo'; }
+  else { st.textContent='Normal · 2 links'; st.className='status st-ok'; }
   const latest=D.rows.length?D.rows[D.rows.length-1][0]:cur;
   $('clock').textContent= D.live ? `● LIVE ${hms(D.start+latest)} UTC` : `${hms(D.start+cur)} UTC  ·  +${fmt(cur)}`;
   document.querySelectorAll('#events button').forEach(bn=>{ const t=+bn.dataset.t; bn.classList.toggle('cur', cur>=t && cur<t+20); });
@@ -886,12 +886,12 @@ async function fetchLive(since){
 function liveMsg(t){ $('msg').textContent=t; const es=$('emptysub'); if(es) es.textContent=t; }
 function liveErr(e){
   const c=e&&e.code;
-  if(c==='server_not_connected') liveMsg('Mode langsung memerlukan server lokal: jalankan twin/live_server.py di REDLAB dan buka http://localhost:8799.');
-  else if(c==='not_in_manifest') liveMsg('Akses halaman ini ke server lokal ditolak.');
-  else if(c==='approval_required') liveMsg('Persetujuan diperlukan: pilih LIVE lagi lalu izinkan akses.');
-  else if(c==='cancelled') liveMsg('Dibatalkan di aplikasi.');
-  else if(c==='tool_error') liveMsg('RPi tidak terjangkau dari REDLAB: '+String(e.message||'').slice(0,160));
-  else liveMsg('Sambungan langsung terputus ('+(c||'kesalahan')+'), mencoba ulang…');
+  if(c==='server_not_connected') liveMsg('Live mode needs the local server: run twin/live_server.py on REDLAB and open http://localhost:8799.');
+  else if(c==='not_in_manifest') liveMsg('This page’s access to the local server was denied.');
+  else if(c==='approval_required') liveMsg('Approval required: pick LIVE again, then allow access.');
+  else if(c==='cancelled') liveMsg('Cancelled in the app.');
+  else if(c==='tool_error') liveMsg('RPi unreachable from REDLAB: '+String(e.message||'').slice(0,160));
+  else liveMsg('Live connection dropped ('+(c||'error')+'), retrying…');
   return c;
 }
 function liveEvents(test){
@@ -908,7 +908,7 @@ async function poll(){
     const p=await fetchLive(LV.since); LV.fails=0;
     const rows=(p.rows||[]).filter(x=>x[0]>LV.since);
     if(rows.length){
-      if(!D||!D.live){ setData({name:'LANGSUNG', live:true, note:'Data langsung dari RPi OMR. Pemutusan link dari uji otomatis atau tombol kontrol ditandai otomatis.', start:rows[0][0], rows:[], events:[]}); }
+      if(!D||!D.live){ setData({name:'LIVE', live:true, note:'Live data from the RPi OMR. Link cuts from the auto test or control buttons are flagged automatically.', start:rows[0][0], rows:[], events:[]}); }
       rows.forEach(x=>D.rows.push([x[0]-D.start, ...x.slice(1)]));
       setBase(rate());
       schedAccumulate(rows);
@@ -916,73 +916,73 @@ async function poll(){
       if(D.rows.length>7200) D.rows.splice(0,D.rows.length-7200);
       const ev=liveEvents(p.test).concat(manualEvents(p.manual)).sort((x,y)=>x.t-y.t); const sig=JSON.stringify(ev);
       if(sig!==LV.evsig){ LV.evsig=sig; D.events=ev; refreshLists(); }
-      const run=p.test&&!p.test.done; LV.testRunning=!!run; schedButtons(); $('starttest').disabled=!!run; $('starttest').textContent= run?'Uji otomatis berjalan…':'Mulai uji otomatis (7 mnt)';
-      liveMsg('Data RPi diterima · '+new Date(p.now*1000).toISOString().substr(11,8)+' UTC');
+      const run=p.test&&!p.test.done; LV.testRunning=!!run; schedButtons(); $('starttest').disabled=!!run; $('starttest').textContent= run?'Auto test running…':'Start auto test (7 min)';
+      liveMsg('RPi data received · '+new Date(p.now*1000).toISOString().substr(11,8)+' UTC');
     }
     LV.age=(p.now&&LV.since)? Math.max(0,Math.round(p.now-LV.since)) : null;
     LV.clockSkew=Number.isFinite(p.clock_skew_s)?p.clock_skew_s:null;
     LV.sshMs=Number.isFinite(p.ssh_ms)?p.ssh_ms:null;
     const conn=$('conn');
     if(conn) conn.title=[
-      LV.age==null?'Usia sampel RPi: belum tersedia':'Usia sampel RPi: '+LV.age+' dtk',
-      LV.clockSkew==null?'Selisih jam RPi–REDLAB: belum tersedia':'Selisih jam RPi–REDLAB: sekitar '+(LV.clockSkew>0?'+':'')+LV.clockSkew+' dtk (estimasi dari titik tengah permintaan)',
-      LV.sshMs==null?'Durasi SSH: belum tersedia':'Durasi pengambilan via SSH: '+LV.sshMs+' md',
-      Number.isFinite(p.client_ms)?'Durasi permintaan total: '+p.client_ms+' md':''
+      LV.age==null?'RPi sample age: not available yet':'RPi sample age: '+LV.age+' s',
+      LV.clockSkew==null?'RPi–REDLAB clock skew: not available yet':'RPi–REDLAB clock skew: about '+(LV.clockSkew>0?'+':'')+LV.clockSkew+' s (estimated from request midpoint)',
+      LV.sshMs==null?'SSH duration: not available yet':'SSH fetch duration: '+LV.sshMs+' ms',
+      Number.isFinite(p.client_ms)?'Total request duration: '+p.client_ms+' ms':''
     ].filter(Boolean).join('\n');
-    if(!LV.since) setConn('wait','Menunggu sampel RPi…');
-    else if(LV.age>15) setConn('stale','Data tertunda '+LV.age+' dtk');
-    else if(LV.clockSkew!==null&&Math.abs(LV.clockSkew)>5) setConn('stale','Jam RPi selisih '+Math.round(Math.abs(LV.clockSkew))+' dtk');
-    else setConn('live','LIVE · jeda '+(LV.age??'–')+' dtk');
-  }catch(e){ const c=liveErr(e); LV.fails++; setConn(LV.fails>=3?'off':'retry', LV.fails>=3?'RPi tak terjangkau':'Mencoba ulang…');
-    if(['server_not_connected','not_in_manifest','not_granted','capability_disabled'].includes(c)){ stopLive(); setConn('off','Live terputus'); } }
+    if(!LV.since) setConn('wait','Waiting for RPi samples…');
+    else if(LV.age>15) setConn('stale','Data delayed '+LV.age+' s');
+    else if(LV.clockSkew!==null&&Math.abs(LV.clockSkew)>5) setConn('stale','RPi clock off by '+Math.round(Math.abs(LV.clockSkew))+' s');
+    else setConn('live','LIVE · lag '+(LV.age??'–')+' s');
+  }catch(e){ const c=liveErr(e); LV.fails++; setConn(LV.fails>=3?'off':'retry', LV.fails>=3?'RPi unreachable':'Retrying…');
+    if(['server_not_connected','not_in_manifest','not_granted','capability_disabled'].includes(c)){ stopLive(); setConn('off','Live disconnected'); } }
   finally{ LV.busy=false; }
 }
 async function startLive(){
-  liveMsg('Menghubungkan ke RPi…');
+  liveMsg('Connecting to the RPi…');
   let mcp = (window.claude && window.claude.use) ? await window.claude.use('mcp') : null, mode = mcp ? 'mcp' : null;
   if(!mcp){ try{ const r=await fetch('api/live?since=0',{cache:'no-store'}); if(r.ok) mode='http'; }catch(e){} }
-  if(!mode){ setConn('off','Mode langsung tidak tersedia'); liveMsg(location.protocol==='file:'
-      ? 'Berkas ini dibuka dari disk sehingga tidak dapat mengambil data RPi. Jalankan "python3 live_server.py" di folder twin, lalu buka http://localhost:8799.'
-      : 'Mode langsung tidak tersedia di sini. Buka http://localhost:8799 di REDLAB (jalankan twin/live_server.py).'); return; }
+  if(!mode){ setConn('off','Live mode unavailable'); liveMsg(location.protocol==='file:'
+      ? 'This file was opened from disk, so it can’t fetch RPi data. Run "python3 live_server.py" in the twin folder, then open http://localhost:8799.'
+      : 'Live mode is unavailable here. Open http://localhost:8799 on REDLAB (run twin/live_server.py).'); return; }
   LV={on:true, timer:null, since:0, mcp, mode, busy:false, fails:0, evsig:'', testRunning:false};
-  liveMsg(mode==='http'?'Menghubungkan melalui server lokal REDLAB…':'Menghubungkan melalui aplikasi Claude…');
+  liveMsg(mode==='http'?'Connecting via the REDLAB local server…':'Connecting via the Claude app…');
   D=null; $('starttest').hidden=false; playing=true; $('play').hidden=true; $('speeds').hidden=true;
   await poll(); LV.timer=setInterval(poll,2500);
-  schedStart(); vpnStart(); linkStart(); jetStart(); $('tlctl').hidden=false; $('tlhint').textContent='Seret grafik atau gunakan penggeser untuk melihat data sebelumnya';
+  schedStart(); vpnStart(); linkStart(); jetStart(); $('tlctl').hidden=false; $('tlhint').textContent='Drag the chart or use the slider to view earlier data';
 }
-function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); setConn('idle','Mode rekaman'); }
+function stopLive(){ if(LV.timer) clearInterval(LV.timer); LV.on=false; LV.timer=null; $('starttest').hidden=true; $('play').hidden=false; $('speeds').hidden=false; schedStop(); setConn('idle','Recording mode'); }
 $('starttest').onclick=()=>startTest();
 async function startTest(){
-  if(!LV.on) return false; $('starttest').disabled=true; liveMsg('Memulai uji otomatis di RPi…');
+  if(!LV.on) return false; $('starttest').disabled=true; liveMsg('Starting the auto test on the RPi…');
   try{ let p; if(LV.mode==='http'){ const r=await fetch('api/start-test?duration=420',{method:'POST'}); p=await r.json(); } else { const r=await LV.mcp.callTool(HOST,'omr_start_test',{duration:420},{cache:false}); p=r.payload||{}; }
-    liveMsg(p.started?'Uji otomatis dimulai. Singtel diputus pada detik ke-30.':'Uji gagal dimulai: '+String(p.console||'').split('\n').slice(-3).join(' ')); return !!p.started; }
+    liveMsg(p.started?'Auto test started. Singtel is cut at the 30-second mark.':'Test failed to start: '+String(p.console||'').split('\n').slice(-3).join(' ')); return !!p.started; }
   catch(e){ liveErr(e); $('starttest').disabled=false; return false; }
 }
 function refreshLists(){
   const ol=$('events'); ol.innerHTML='';
   D.events.forEach(e=>{ const li=document.createElement('li'); const b=document.createElement('button');
-    b.innerHTML=`<span class="t">${hms(D.start+e.t).substr(0,8)}</span><span>${esc(e.label)}</span>`; b.dataset.t=e.t; b.title='Tampilkan di timeline';
+    b.innerHTML=`<span class="t">${hms(D.start+e.t).substr(0,8)}</span><span>${esc(e.label)}</span>`; b.dataset.t=e.t; b.title='Show on the timeline';
     b.onclick=()=>{ if(!hasData()||!VIEW.span) return; const [a,z]=bounds(), span=Math.min(VIEW.span,z-a), end=Math.max(a+span,Math.min(z,e.t+span*0.35));
       VIEW.follow=end>=z-0.5; VIEW.end=end; draw(false); };
     li.appendChild(b); ol.appendChild(li); });
   const tb=$('sum'); tb.innerHTML='';
   summary().forEach(s=>{ const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${esc(s.e.label)}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} dtk</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'putus':'pulih')+' +'+s.det+' dtk'}</td>`; tb.appendChild(tr); });
-  if(!D.events.length) ol.innerHTML='<li class="emptyrow">Belum ada kejadian. Pemutusan link dan langkah uji otomatis akan muncul di sini.</li>';
-  if(!tb.children.length) tb.innerHTML='<tr><td colspan="4" class="emptyrow">Belum ada kejadian untuk diringkas.</td></tr>';
+    tr.innerHTML=`<td>${esc(s.e.label)}</td><td class="n">${hms(D.start+s.e.t)}</td><td class="n ${s.mx>=5?'bad':''}">${s.mx} s</td><td class="n">${s.det===null?'–':(s.e.kind==='down'?'cut':'restored')+' +'+s.det+' s'}</td>`; tb.appendChild(tr); });
+  if(!D.events.length) ol.innerHTML='<li class="emptyrow">No events yet. Link cuts and auto-test steps will appear here.</li>';
+  if(!tb.children.length) tb.innerHTML='<tr><td colspan="4" class="emptyrow">No events to summarize yet.</td></tr>';
   $('pnote').textContent=D.note||'';
 }
 
 /* ---------- scheduler test (only via local server live_server.py) ---------- */
 const SETTLE=25;   // seconds after a switch that are not counted (tunnel restart)
 const SCHED_INFO={
-  default:'<b>default</b> — penjadwal bawaan kernel. Memilih sub-alur dengan RTT terendah terlebih dahulu (Simba ≈11 ms), lalu mengirim sisanya melalui sub-alur lain. Acuan perbandingan.',
-  bpf_minrtt:'<b>bpf_minrtt</b> — selalu memilih sub-alur dengan RTT terkecil. Hasilnya kemungkinan mirip dengan default, dengan trafik lebih banyak melalui Simba.',
-  bpf_rr:'<b>bpf_rr</b> — bergiliran antar-sub-alur. <span class="warn">Pada uji sebelumnya, sub-alur kedua tidak terbentuk atau terputus.</span> Pantau status tunnel OpenVPN pada kartu link.',
-  bpf_first:'<b>bpf_first</b> — selalu menggunakan sub-alur pertama; sub-alur lain hanya menjadi cadangan saat sub-alur pertama hilang. Berguna untuk mengamati pengalihan jalur.',
-  bpf_bkup:'<b>bpf_bkup</b> — hanya menggunakan sub-alur non-cadangan; sub-alur cadangan dipakai saat jalur utama gagal. Tanpa penanda cadangan, perilakunya sama seperti default.',
-  bpf_burst:'<b>bpf_burst</b> — seperti default, tetapi mengirim dalam rentetan melalui sub-alur terbaik. Amati apakah aliran menjadi lebih berombak.',
-  bpf_red:'<b>bpf_red</b> — redundan (dinonaktifkan). <span class="warn">Pada kernel ini, mode tersebut merusak tunnel OpenVPN --mptcp: jabat tangan tidak selesai dan pemulihan memerlukan mulai ulang VPS.</span> Jangan gunakan.'
+  default:'<b>default</b> — the kernel’s built-in scheduler. Picks the lowest-RTT subflow first (Simba ≈11 ms), then sends the rest over the other subflow. The comparison baseline.',
+  bpf_minrtt:'<b>bpf_minrtt</b> — always picks the lowest-RTT subflow. Likely similar to default, with more traffic over Simba.',
+  bpf_rr:'<b>bpf_rr</b> — round-robins between subflows. <span class="warn">In earlier tests the second subflow did not form or dropped.</span> Watch the OpenVPN tunnel status on the link card.',
+  bpf_first:'<b>bpf_first</b> — always uses the first subflow; the others are backup only when the first is lost. Useful for observing path failover.',
+  bpf_bkup:'<b>bpf_bkup</b> — uses only non-backup subflows; backup subflows kick in when the primary path fails. With no backup flag set, it behaves like default.',
+  bpf_burst:'<b>bpf_burst</b> — like default, but sends in bursts over the best subflow. Watch whether the flow gets choppier.',
+  bpf_red:'<b>bpf_red</b> — redundant (disabled). <span class="warn">On this kernel it breaks the OpenVPN --mptcp tunnel: the handshake never completes and recovery needs a VPS restart.</span> Do not use.'
 };
 let SC={cur:null, avail:[], log:[], busy:false, timer:null, run:{}};
 let STATS={}; try{ STATS=JSON.parse(localStorage.getItem('twin.schedstats.v1')||'{}')||{}; }catch(e){ STATS={}; }
@@ -1011,10 +1011,10 @@ function renderCmp(){
   const bAvg=best(avg,1), bSt=best(s=>s.stall,0), bMx=best(s=>s.maxrun,0), bFull=best(full,1);
   const curKey=SC.log.length? (()=>{const g=schedAt(Date.now()/1000); return g.start+'|'+g.name;})() : '';
   $('cmpb').innerHTML=list.map(s=>{ const k=s.start+'|'+s.name, f=full(s);
-    return `<tr class="${k===curKey&&LV.on?'now':''}"><td>${k===curKey&&LV.on?'<span class="sdot" title="sedang berjalan"></span>':''}${s.name}</td><td class="n">${hms(s.first)}</td><td class="n">${fmt(s.n)}</td>`+
+    return `<tr class="${k===curKey&&LV.on?'now':''}"><td>${k===curKey&&LV.on?'<span class="sdot" title="running now"></span>':''}${s.name}</td><td class="n">${hms(s.first)}</td><td class="n">${fmt(s.n)}</td>`+
       `<td class="n ${avg(s)===bAvg?'best':''}">${kfmt(avg(s))}</td><td class="n">${sh(s)}% / ${100-sh(s)}%</td>`+
       `<td class="n ${s.stall===bSt?'best':(s.stall>=5?'bad':'')}">${s.stall} s</td><td class="n ${s.maxrun===bMx?'best':(s.maxrun>=5?'bad':'')}">${s.maxrun} s</td>`+
-      `<td class="n ${f!==null&&f===bFull?'best':(f!==null&&f<90?'bad':'')}">${f===null?'–':f+'%'}</td><td>${s.cut?'ya':'tidak'}</td></tr>`; }).join('');
+      `<td class="n ${f!==null&&f===bFull?'best':(f!==null&&f<90?'bad':'')}">${f===null?'–':f+'%'}</td><td>${s.cut?'yes':'no'}</td></tr>`; }).join('');
 }
 function schedButtons(){
   const live=LV.on&&LV.mode==='http', dis=!live||SC.busy||LV.testRunning||!SC.avail.length;
@@ -1022,31 +1022,31 @@ function schedButtons(){
   if(live && !SC.busy && $('schedsel').value===SC.cur) $('schedapply').disabled=true;
   if(live && !SC.busy && SC.cur==='default') $('scheddef').disabled=true;
 }
-function schedDesc(){ const n=$('schedsel').value; $('scheddesc').innerHTML=(SCHED_INFO[n]||('<b>'+n+'</b> — penjadwal BPF tambahan di RPi.'))+
-  ' Pergantian memulai ulang tunnel OpenVPN (aliran jeda ≈10–20 dtk), karena penjadwal hanya berlaku untuk koneksi MPTCP baru. Tidak persisten: pengaturan hilang saat RPi dimulai ulang.'; }
+function schedDesc(){ const n=$('schedsel').value; $('scheddesc').innerHTML=(SCHED_INFO[n]||('<b>'+n+'</b> — an extra BPF scheduler on the RPi.'))+
+  ' Switching restarts the OpenVPN tunnel (flow pauses ≈10–20 s), because the scheduler only applies to new MPTCP connections. Not persistent: the setting is lost when the RPi reboots.'; }
 async function fetchSched(){
   const r=await fetch('api/sched',{cache:'no-store'}); const p=await r.json(); if(!r.ok||p.error) throw new Error(p.error||('HTTP '+r.status));
   const first=!SC.avail.length; SC.cur=p.current; SC.avail=(p.available||[]).filter(n=>n!=='bpf_red'); SC.log=(p.log||[]).sort((a,b)=>a[0]-b[0]);
   const sel=$('schedsel'), keep=sel.value;
-  if(first || sel.options.length!==SC.avail.length){ sel.innerHTML=SC.avail.map(n=>`<option value="${n}">${n}${n===SC.cur?' (aktif)':''}</option>`).join(''); sel.value=keep&&SC.avail.includes(keep)?keep:SC.cur; }
-  [...sel.options].forEach(o=>o.textContent=o.value+(o.value===SC.cur?' (aktif)':''));
-  $('schedcur').textContent='aktif: '+SC.cur; $('schedcur').className='chip ok';
+  if(first || sel.options.length!==SC.avail.length){ sel.innerHTML=SC.avail.map(n=>`<option value="${n}">${n}${n===SC.cur?' (active)':''}</option>`).join(''); sel.value=keep&&SC.avail.includes(keep)?keep:SC.cur; }
+  [...sel.options].forEach(o=>o.textContent=o.value+(o.value===SC.cur?' (active)':''));
+  $('schedcur').textContent='active: '+SC.cur; $('schedcur').className='chip ok';
   schedDesc(); schedButtons(); renderCmp(); if(D) draw(true);
   return p;
 }
 async function schedStart(){
   if(LV.mode!=='http'){ $('schedp').hidden=true; return; }
-  $('schedp').hidden=false; schedMsg('Membaca penjadwal di RPi…');
+  $('schedp').hidden=false; schedMsg('Reading schedulers on the RPi…');
   try{ await fetchSched(); schedMsg(''); }
-  catch(e){ schedMsg('Kontrol penjadwal tidak tersedia: '+String(e.message||e).slice(0,140)+'. Perbarui live_server.py.'); }
+  catch(e){ schedMsg('Scheduler control unavailable: '+String(e.message||e).slice(0,140)+'. Update live_server.py.'); }
   SC.timer=setInterval(()=>{ if(!SC.busy) fetchSched().catch(()=>{}); },15000);
 }
-function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); jetStop(); $('tlctl').hidden=true; $('tlhint').textContent='Seret grafik untuk menelusuri waktu'; }
+function schedStop(){ if(SC.timer) clearInterval(SC.timer); SC.timer=null; $('schedp').hidden=true; renderCmp(); linkStop(); vpnStop(); jetStop(); $('tlctl').hidden=true; $('tlhint').textContent='Drag the chart to scrub time'; }
 
 /* ---------- transport / VPN switch (compare Glorytun UDP vs Glorytun TCP/MPTCP) ---------- */
 const VPN_INFO={
-  glorytun_udp:'<b>Glorytun UDP</b> — menggabungkan kedua SIM melalui UDP (bukan MPTCP kernel). Stabil; kedua link berbagi beban secara seimbang. Penjadwal MPTCP di atas <b>tidak berpengaruh</b> pada mode ini.',
-  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — satu koneksi TCP digabung oleh MPTCP kernel melalui kedua SIM (lihat 2 sub-alur). <b>Penjadwal di atas memengaruhi kamera</b>. Jika RTT kedua link berbeda jauh, satu aliran ringan cenderung memakai SIM dengan RTT rendah.'
+  glorytun_udp:'<b>Glorytun UDP</b> — bonds both SIMs over UDP (not kernel MPTCP). Stable; both links share the load evenly. The MPTCP scheduler above has <b>no effect</b> in this mode.',
+  glorytun_tcp:'<b>Glorytun TCP · MPTCP</b> — one TCP connection bonded by kernel MPTCP over both SIMs (see 2 subflows). <b>The scheduler above affects the cameras</b>. If the two links’ RTTs differ a lot, a light flow tends to use the low-RTT SIM.'
 };
 const VP={cur:null,avail:[],busy:false,timer:null};
 function vpnDesc(){ $('vpndesc').innerHTML=VPN_INFO[$('vpnsel').value]||('<b>'+$('vpnsel').value+'</b>'); }
@@ -1063,21 +1063,21 @@ async function fetchVpn(){
 }
 async function vpnApply(name){
   if(name===VP.cur) return;
-  VP.busy=true; vpnButtons(); vpnMsg('Mengganti ke '+name+'… tunnel dimulai ulang (~30–60 dtk), kamera jeda sebentar.');
+  VP.busy=true; vpnButtons(); vpnMsg('Switching to '+name+'… tunnel restarts (~30–60 s), cameras pause briefly.');
   try{
     const r=await fetch('api/vpn?name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
     if(!r.ok||p.ok===false) throw new Error(p.error||('HTTP '+r.status));
-    VP.cur=p.current; vpnMsg('Kini menggunakan '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Kamera akan kembali dalam beberapa detik.');
-  }catch(e){ vpnMsg('Gagal mengganti transport: '+String(e.message||e).slice(0,160)); }
+    VP.cur=p.current; vpnMsg('Now using '+((p.labels&&p.labels[p.current])||p.current)+(p.mptcp?' (MPTCP)':'')+'. Cameras will return in a few seconds.');
+  }catch(e){ vpnMsg('Failed to switch transport: '+String(e.message||e).slice(0,160)); }
   VP.busy=false; await fetchVpn().catch(()=>{}); vpnButtons();
 }
 async function vpnStart(){
   if(LV.mode!=='http'){ $('vpnp').hidden=true; return; }
-  $('vpnp').hidden=false; vpnMsg('Memuat transport…');
+  $('vpnp').hidden=false; vpnMsg('Loading transport…');
   try{ await fetchVpn(); vpnMsg(''); }catch(e){
-    $('vpnsel').innerHTML='<option value="">Transport tidak tersedia</option>';
+    $('vpnsel').innerHTML='<option value="">Transport unavailable</option>';
     VP.avail=[]; vpnButtons();
-    vpnMsg('Gagal memuat transport: '+String(e.message||e).slice(0,140));
+    vpnMsg('Failed to load transport: '+String(e.message||e).slice(0,140));
   }
   VP.timer=setInterval(()=>{ if(!VP.busy) fetchVpn().catch(()=>{}); },15000);
 }
@@ -1090,21 +1090,21 @@ async function waitTunnel(since, maxS){ // tunggu sampel live terbaru menunjukka
   while((Date.now()-t0)/1000<maxS){ await sleep(1500);
     const last=D&&D.rows.length? D.rows[D.rows.length-1] : null;
     if(last && D.start+last[0]>since+10 && last.length>=7 && last[5] && last[6]) return true;
-    schedMsg(`Menunggu tunnel kembali dengan 2 sub-alur… ${Math.round((Date.now()-t0)/1000)} dtk`); }
+    schedMsg(`Waiting for the tunnel to return with 2 subflows… ${Math.round((Date.now()-t0)/1000)} s`); }
   return false;
 }
 async function schedApply(name, thenTest){
   if(SC.busy||!LV.on) return; SC.busy=true; schedButtons();
-  schedMsg(`Mengganti penjadwal ke ${name} dan memulai ulang tunnel OpenVPN…`);
+  schedMsg(`Switching scheduler to ${name} and restarting the OpenVPN tunnel…`);
   try{
     const r=await fetch('api/sched?restart=1&name='+encodeURIComponent(name),{method:'POST'}); const p=await r.json();
     if(!r.ok||!p.ok) throw new Error(p.error||('HTTP '+r.status));
     await fetchSched();
     const ok=await waitTunnel(p.now||Date.now()/1000, 75);
-    if(!ok) schedMsg(`${name} aktif, tetapi tunnel belum kembali dengan 2 sub-alur setelah 75 dtk (ovpn-guard akan mencoba memulihkan).`);
-    else schedMsg(`${name} aktif · tunnel memiliki 2 sub-alur.`);
-    if(thenTest){ await sleep(ok?5000:0); const started=await startTest(); schedMsg((ok?'':'⚠ tunnel belum memiliki 2 sub-alur · ')+(started?`${name} aktif · uji otomatis 7 menit berjalan. Hasil masuk ke tabel perbandingan.`:`${name} aktif, tetapi uji otomatis gagal dimulai (lihat pesan di atas).`)); }
-  }catch(e){ schedMsg('Gagal mengganti penjadwal: '+String(e.message||e).slice(0,160)); }
+    if(!ok) schedMsg(`${name} active, but the tunnel has not returned with 2 subflows after 75 s (ovpn-guard will try to recover).`);
+    else schedMsg(`${name} active · the tunnel has 2 subflows.`);
+    if(thenTest){ await sleep(ok?5000:0); const started=await startTest(); schedMsg((ok?'':'⚠ tunnel does not have 2 subflows yet · ')+(started?`${name} active · 7-minute auto test running. Results go to the comparison table.`:`${name} active, but the auto test failed to start (see the message above).`)); }
+  }catch(e){ schedMsg('Failed to switch scheduler: '+String(e.message||e).slice(0,160)); }
   finally{ SC.busy=false; schedButtons(); }
 }
 $('schedsel').onchange=()=>{ schedDesc(); schedButtons(); };
@@ -1125,14 +1125,14 @@ renderCmp();
 const LNAME={wan1:'Simba',wan2:'Singtel'};
 let LK={cut:{wan1:false,wan2:false}, mode:'auto', busy:false, timer:null};
 function manualEvents(list){ if(!list||!D||!D.rows.length) return [];
-  return list.map(m=>({t:m.ep-D.start, label:(m.kind==='down'?'Putus ':'Pulih ')+LNAME[m.dev]+(m.how==='auto-restore'?' (otomatis)':' (manual)'), kind:m.kind, link:m.dev==='wan1'?1:2}))
+  return list.map(m=>({t:m.ep-D.start, label:(m.kind==='down'?'Cut ':'Restored ')+LNAME[m.dev]+(m.how==='auto-restore'?' (auto)':' (manual)'), kind:m.kind, link:m.dev==='wan1'?1:2}))
     .filter(e=>e.t>=D.rows[0][0]-60); }
 function linkMsg(t){ $('linkmsg').textContent=t; }
 function renderLink(){
   const live=LV.on&&LV.mode==='http';
   [['cut1','wan1'],['cut2','wan2']].forEach(([id,d])=>{ const b=$(id), other=d==='wan1'?'wan2':'wan1';
-    b.textContent=LK.cut[d]?'Pulihkan':'Putus'; b.classList.toggle('on',LK.cut[d]);
-    b.disabled=!live||LK.busy||(!LK.cut[d]&&LK.cut[other]); b.title=(!LK.cut[d]&&LK.cut[other])?'Pulihkan '+LNAME[other]+' terlebih dahulu agar koneksi RPi tidak terputus':''; });
+    b.textContent=LK.cut[d]?'Restore':'Cut'; b.classList.toggle('on',LK.cut[d]);
+    b.disabled=!live||LK.busy||(!LK.cut[d]&&LK.cut[other]); b.title=(!LK.cut[d]&&LK.cut[other])?'Restore '+LNAME[other]+' first so the RPi connection is not lost':''; });
   [...$('prio').children].forEach(b=>{ b.className=b.dataset.m===LK.mode?'on':''; b.disabled=!live||LK.busy; });
   $('cutsecs').disabled=!live||LK.busy;
 }
@@ -1141,17 +1141,17 @@ async function fetchLink(){ const p=await api('GET','api/link'); LK.cut=p.cut; L
 async function linkAction(dev){
   if(LK.busy) return; LK.busy=true; renderLink();
   const cutting=!LK.cut[dev], secs=$('cutsecs').value;
-  linkMsg(cutting?`Memutus ${LNAME[dev]}…`:`Memulihkan ${LNAME[dev]}…`);
+  linkMsg(cutting?`Cutting ${LNAME[dev]}…`:`Restoring ${LNAME[dev]}…`);
   try{ const p=await api('POST',`api/link?dev=${dev}&action=${cutting?'cut':'restore'}&secs=${secs}`); LK.cut=p.cut; LK.mode=p.mode;
-    linkMsg(cutting?`${LNAME[dev]} terputus — pulih otomatis dalam ${Math.round(secs/60)} mnt. OMR mendeteksinya dalam ≈20–30 dtk.`:`${LNAME[dev]} pulih. Sub-alur tunnel kembali dalam ≈15–40 dtk.`); }
-  catch(e){ linkMsg('Gagal: '+String(e.message||e).slice(0,180)); }
+    linkMsg(cutting?`${LNAME[dev]} cut — auto-restores in ${Math.round(secs/60)} min. OMR detects it in ≈20–30 s.`:`${LNAME[dev]} restored. The tunnel subflow returns in ≈15–40 s.`); }
+  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
   finally{ LK.busy=false; renderLink(); }
 }
 async function setPrio(m){
-  if(LK.busy||m===LK.mode) return; LK.busy=true; renderLink(); linkMsg('Mengatur jalur utama…');
+  if(LK.busy||m===LK.mode) return; LK.busy=true; renderLink(); linkMsg('Setting the primary path…');
   try{ const p=await api('POST','api/prio?mode='+m); LK.mode=p.mode; LK.cut=p.cut;
-    linkMsg(m==='auto'?'Kedua link aktif: penjadwal menentukan jalur.':(m==='simba'?'Simba utama: Singtel menjadi cadangan.':'Singtel utama: Simba menjadi cadangan.')); }
-  catch(e){ linkMsg('Gagal: '+String(e.message||e).slice(0,180)); }
+    linkMsg(m==='auto'?'Both links active: the scheduler chooses the path.':(m==='simba'?'Simba primary: Singtel becomes backup.':'Singtel primary: Simba becomes backup.')); }
+  catch(e){ linkMsg('Failed: '+String(e.message||e).slice(0,180)); }
   finally{ LK.busy=false; renderLink(); }
 }
 $('cut1').onclick=()=>linkAction('wan1'); $('cut2').onclick=()=>linkAction('wan2');
@@ -1159,7 +1159,7 @@ $('cut1').onclick=()=>linkAction('wan1'); $('cut2').onclick=()=>linkAction('wan2
 async function linkStart(){
   if(LV.mode!=='http'){ $('linkp').hidden=true; return; }
   $('linkp').hidden=false; renderLink();
-  try{ await fetchLink(); }catch(e){ linkMsg('Kontrol link tidak tersedia: '+String(e.message||e).slice(0,140)+'. Perbarui live_server.py.'); }
+  try{ await fetchLink(); }catch(e){ linkMsg('Link control unavailable: '+String(e.message||e).slice(0,140)+'. Update live_server.py.'); }
   LK.timer=setInterval(()=>{ if(!LK.busy) fetchLink().catch(()=>{}); },10000);
 }
 function linkStop(){ if(LK.timer) clearInterval(LK.timer); LK.timer=null; $('linkp').hidden=true; }
@@ -1170,7 +1170,7 @@ function jetRenderW(){ const e=$('jwcur'); if(!e) return; e.textContent='w='+JET
   [...$('jsplit').children].forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.w-JET.w)<0.001)); }
 async function jetSetW(w){ JET.w=Math.max(0,Math.min(1,w)); JET.userAt=Date.now(); jetRenderW();
   try{ await api('POST','api/split?w='+JET.w.toFixed(3)); $('jmsg').textContent=''; }
-  catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); } }
+  catch(e){ $('jmsg').textContent='failed: '+String(e.message||e).slice(0,90); } }
 function drawSpark(){ const c=$('jwspark'); if(!c||!c.clientWidth) return;
   const dpr=devicePixelRatio||1, w=c.clientWidth, h=46; c.width=w*dpr; c.height=h*dpr;
   const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h);
@@ -1187,12 +1187,12 @@ async function jetPoll(){
     const r=JET.whist.slice(-6).map(s=>s[1]); const moved=r.length>=3 && (Math.max(...r)-Math.min(...r))>0.02;
     JET.aiOn = moved && (now-JET.userAt>15000);
     JET.w=w; jetRenderW(); drawSpark();
-    const ai=$('jai'); if(ai){ ai.textContent=JET.aiOn?'● AI aktif · mengubah pembagian':'pembagian tetap'; ai.className='chip aistat'+(JET.aiOn?' on':''); }
+    const ai=$('jai'); if(ai){ ai.textContent=JET.aiOn?'● AI active · adjusting the split':'split fixed'; ai.className='chip aistat'+(JET.aiOn?' on':''); }
   }catch(e){}
 }
-$('jload').onclick=async()=>{ if(!confirm('Uji beban mengirim ~30 Mbit/s selama 30 detik lewat dua SIM (≈110 MB kuota seluler). Lanjutkan?')) return; $('jload').disabled=true;
+$('jload').onclick=async()=>{ if(!confirm('The load test sends ~30 Mbit/s for 30 seconds over both SIMs (≈110 MB of cellular data). Continue?')) return; $('jload').disabled=true;
   try{ const p=await api('POST','api/loadtest?action=start&secs=30&mbps=30'); JET.loadUntil=Date.now()+(p.secs||30)*1000; $('jmsg').textContent=''; }
-  catch(e){ $('jmsg').textContent='gagal: '+String(e.message||e).slice(0,90); $('jload').disabled=false; } };
+  catch(e){ $('jmsg').textContent='failed: '+String(e.message||e).slice(0,90); $('jload').disabled=false; } };
 [...$('jsplit').children].forEach(b=>b.onclick=()=>jetSetW(+b.dataset.w));
 $('jslider').oninput=e=>{ JET.w=+e.target.value/100; jetRenderW(); };
 $('jslider').onchange=e=>jetSetW(+e.target.value/100);
@@ -1205,38 +1205,38 @@ function jetKPI(a,b){ const el=$('ktot'); if(!el) return; const tot=a+b;
   $('sbar1').style.width=p1+'%'; $('sbar2').style.width=(100-p1)+'%';
   $('slab1').textContent='Simba '+p1+'%'; $('slab2').textContent='Singtel '+(100-p1)+'%';
   if(JET.loadUntil){ const left=Math.ceil((JET.loadUntil-Date.now())/1000);
-    if(left>0){ $('jload').textContent='Uji beban… '+left+'s'; $('jload').disabled=true; }
-    else { JET.loadUntil=0; $('jload').textContent='Uji beban 30 dtk'; $('jload').disabled=false; } } }
+    if(left>0){ $('jload').textContent='Load test… '+left+'s'; $('jload').disabled=true; }
+    else { JET.loadUntil=0; $('jload').textContent='Load test 30 s'; $('jload').disabled=false; } } }
 function aiRender(d){
-  if(!d||!d.state){ const st=$('aists'); st.textContent=d&&d.available===false?'menunggu Jetson':'tidak tersedia'; st.className='chip '+(d&&d.available===false?'':'bad');
-    $('ai_s1').textContent='belum ada data'; $('ai_s2').textContent='belum ada data'; $('ai_w').textContent='w=—';
-    $('ai_cand').innerHTML='<div class="emptyrow">Belum ada keputusan dari controller Jetson.</div>';
-    $('ai_why').textContent=(d&&d.message)||'Jalankan controller LinUCB di Jetson. Kesalahan komunikasi akan ditampilkan di sini.'; return; }
+  if(!d||!d.state){ const st=$('aists'); st.textContent=d&&d.available===false?'waiting for Jetson':'unavailable'; st.className='chip '+(d&&d.available===false?'':'bad');
+    $('ai_s1').textContent='no data yet'; $('ai_s2').textContent='no data yet'; $('ai_w').textContent='w=—';
+    $('ai_cand').innerHTML='<div class="emptyrow">No decision from the Jetson controller yet.</div>';
+    $('ai_why').textContent=(d&&d.message)||'Run the LinUCB controller on the Jetson. Communication errors show here.'; return; }
   const s=d.state;
   $('ai_s1').textContent='RTT '+s.rtt1+' ms · cap ~'+s.cap1+' Mb';
   $('ai_s2').textContent='RTT '+s.rtt2+' ms · cap ~'+s.cap2+' Mb';
   const cand=d.cand||[];
   $('ai_cand').innerHTML=cand.map(c=>{ const pct=Math.round((c.score||0)*100);
-    return `<div class="candrow ${c.chosen?'pick':''}"><span class="wl">w=${(+c.w).toFixed(2)}</span><div class="cb"><span style="width:${pct}%"></span></div><span class="pk">${c.chosen?'✓ dipilih':''}</span></div>`;
+    return `<div class="candrow ${c.chosen?'pick':''}"><span class="wl">w=${(+c.w).toFixed(2)}</span><div class="cb"><span style="width:${pct}%"></span></div><span class="pk">${c.chosen?'✓ chosen':''}</span></div>`;
   }).join('');
   const ch=d.chosen||{};
   $('ai_w').textContent='w='+(ch.w!=null?(+ch.w).toFixed(2):'–');
-  $('ai_n').textContent=(ch.N!=null?('· N='+ch.N+' sub-alur'):'');
+  $('ai_n').textContent=(ch.N!=null?('· N='+ch.N+' subflows'):'');
   $('ai_why').textContent=d.reason||'';
   const st=$('aists'), age=d.ts?Math.round(Date.now()/1000-d.ts):999;
-  if(age<12){ st.textContent='● langsung'; st.className='chip ok'; } else { st.textContent='menunggu Jetson'; st.className='chip'; } }
+  if(age<12){ st.textContent='● live'; st.className='chip ok'; } else { st.textContent='waiting for Jetson'; st.className='chip'; } }
 function aiError(e){
-  const message='Gagal membaca data AI: '+String(e.message||e).slice(0,160);
-  $('aists').textContent='galat'; $('aists').className='chip bad';
-  $('ai_s1').textContent='data tidak tersedia'; $('ai_s2').textContent='data tidak tersedia';
-  $('ai_w').textContent='w=—'; $('ai_cand').innerHTML='<div class="emptyrow">Tidak dapat mengambil keputusan AI dari RPi.</div>';
+  const message='Failed to read AI data: '+String(e.message||e).slice(0,160);
+  $('aists').textContent='error'; $('aists').className='chip bad';
+  $('ai_s1').textContent='data unavailable'; $('ai_s2').textContent='data unavailable';
+  $('ai_w').textContent='w=—'; $('ai_cand').innerHTML='<div class="emptyrow">Could not fetch the AI decision from the RPi.</div>';
   $('ai_why').textContent=message;
 }
 async function aiPoll(){ try{ aiRender(await api('GET','api/jet')); }catch(e){ aiError(e); } }
 async function jetStart(){ if(LV.mode!=='http'){ $('jetp').hidden=true; $('aiwork').hidden=true; return; }
   $('jetp').hidden=false; $('aiwork').hidden=false;
   try{ const p=await api('GET','api/split'); JET.w=p.w; JET.sigma=p.sigma_kbps||32600; jetRenderW(); jetPoll(); aiPoll(); }
-  catch(e){ $('jmsg').textContent='kontrol split tak tersedia (update live_server.py)'; }
+  catch(e){ $('jmsg').textContent='split control unavailable (update live_server.py)'; }
   if(!JET.ptimer) JET.ptimer=setInterval(()=>{ jetPoll(); aiPoll(); }, 3000); }
 function jetStop(){ if(JET.ptimer){ clearInterval(JET.ptimer); JET.ptimer=null; } $('jetp').hidden=true; $('aiwork').hidden=true; }
 
@@ -1250,18 +1250,18 @@ function vloadOne(selId, frameId, msgId, path){
   const u=vurl(path), f=$(frameId), m=$(msgId); $(selId).value=path;
   m.classList.remove('hint');
   if(location.protocol==='https:'){ f.removeAttribute('src'); m.hidden=false;
-    m.textContent='Video tak bisa diputar di halaman claude.ai (stream VPS plain HTTP). Buka http://localhost:8799 di REDLAB.'; return; }
+    m.textContent='Video can’t play on claude.ai (VPS stream is plain HTTP). Open http://localhost:8799 on REDLAB.'; return; }
   if(VID.on){ if(f.getAttribute('src')!==u) f.src=u; } else f.removeAttribute('src');
   // Hik streams are H265/HEVC. WebRTC decodes them on HEVC-capable browsers; HLS (hls.js) cannot.
   // Show a hint only on HLS, where the Hik frame will be black.
   if(VID.on && /^hik/.test(path) && VID.proto==='hls'){ m.hidden=false; m.classList.add('hint');
-    m.textContent='Hik = H265/4MP · pakai WebRTC untuk melihatnya (HLS tak bisa decode HEVC di browser).'; }
+    m.textContent='Hik = H265/4MP · use WebRTC to view it (HLS can’t decode HEVC in the browser).'; }
   else { m.hidden=true; }
 }
 function vload(){
   [...$('vproto').children].forEach(b=>b.className=b.dataset.p===VID.proto?'on':'');
-  $('vtoggle').textContent=VID.on?'Sembunyikan':'Tampilkan'; $('vgrid').hidden=!VID.on;
-  $('vnote').textContent = VID.proto==='hls' ? 'HLS tertinggal beberapa detik · Hik H265 hitam di HLS, pakai WebRTC' : 'WebRTC nyaris real-time · mendukung Hik H265';
+  $('vtoggle').textContent=VID.on?'Hide':'Show'; $('vgrid').hidden=!VID.on;
+  $('vnote').textContent = VID.proto==='hls' ? 'HLS lags a few seconds · Hik H265 is black on HLS, use WebRTC' : 'WebRTC near real-time · supports Hik H265';
   vloadOne('vpathA','vframeA','vmsgA',VID.pathA);
   vloadOne('vpathB','vframeB','vmsgB',VID.pathB);
 }
@@ -1279,7 +1279,7 @@ function frame(ts){
   if(D&&D.rows.length){
     const end=D.rows[D.rows.length-1][0];
     if(D.live){ const last=D.rows[D.rows.length-1][0]; cur=Math.min(last, Math.max(cur+dt, last-3.5)); }
-    else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Putar'; } }
+    else if(playing){ cur+=dt*speed; if(cur>=end){ cur=end; playing=false; $('play').textContent='▶ Play'; } }
     const row=rowAt(cur), simDt=cur-lastSimT; lastSimT=cur;
     if(simDt>0 && simDt<5) queue=Math.max(0, queue + (D.base-(row[1]+row[2]))*simDt); else if(simDt<0||simDt>=5) queue=0;
     drawDiagram(row,dt);   // particles: every frame
@@ -1304,7 +1304,7 @@ requestAnimationFrame(frame);
 /* ---------- status bar (1 Hz) ---------- */
 setInterval(()=>{ const t=id=>{ const e=$(id); return e?e.textContent.trim():''; }, set=(id,v)=>{ const e=$(id); if(e&&e.textContent!==v) e.textContent=v||'–'; };
   const c=$('conn'); $('sb_led').dataset.s=c?c.dataset.s:''; set('sb_feed', t('conntxt'));
-  set('sb_sched', t('schedcur').replace(/^aktif:\s*/,'')); set('sb_vpn', t('vpncur')); set('sb_ai', t('aists'));
+  set('sb_sched', t('schedcur').replace(/^active:\s*/,'')); set('sb_vpn', t('vpncur')); set('sb_ai', t('aists'));
   set('sb_thr', STALL+' kbps'); set('sb_utc', new Date().toISOString().substr(11,8)); }, 1000);
 </script>
 </body>
