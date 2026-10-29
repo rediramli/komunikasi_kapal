@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Live Corroboration — Win-Table</title>
+<style>
+ :root{--ink:#16202b;--muted:#5b6b7a;--line:#dce3ea;--bg:#fff;--accent:#065a82;--accent2:#1c7293;--ok:#1b7f4b;--warn:#b85042;--chip:#eef4f8;}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e7eef5;--muted:#9fb0bf;--line:#2a3745;--bg:#0f1720;--accent:#56b6e0;--accent2:#7fd3c6;--ok:#58c58c;--warn:#e08a7e;--chip:#17222d;}}
+ :root[data-theme="dark"]{--ink:#e7eef5;--muted:#9fb0bf;--line:#2a3745;--bg:#0f1720;--accent:#56b6e0;--accent2:#7fd3c6;--ok:#58c58c;--warn:#e08a7e;--chip:#17222d;}
+ *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.58 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+ .wrap{max-width:880px;margin:0 auto;padding:28px 16px 56px;}
+ header{border-bottom:3px solid var(--accent);padding-bottom:14px;margin-bottom:18px;}
+ .kicker{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;}
+ h1{font-size:23px;margin:6px 0;line-height:1.2;}.meta{color:var(--muted);font-size:13px;}
+ h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin:24px 0 8px;border-left:3px solid var(--accent2);padding-left:9px;}
+ p{margin:8px 0;}.lead{font-size:16px;}ul{margin:8px 0;padding-left:20px;}li{margin:5px 0;}
+ .chart{border:1px solid var(--line);border-radius:8px;background:var(--chip);padding:10px 8px 4px;}.chart svg{width:100%;height:auto;}
+ table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;}th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;}th{background:var(--chip);font-weight:700;}td.n{text-align:right;font-variant-numeric:tabular-nums;}
+ .box{border:1px solid var(--line);border-left:3px solid var(--ok);background:var(--chip);border-radius:6px;padding:12px 14px;margin:12px 0;}.box.find{border-left-color:var(--warn);}.box h3{margin:0 0 4px;font-size:14px;}
+ code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace;}
+ footer{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+ @media print{body{font-size:12px}.wrap{max-width:none;padding:0}.chart,table{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<header><div class="kicker">Win-Table · Live Corroboration</div>
+<h1>From Model to Metal — Measuring the Split Decisions on the Real Link</h1>
+<div class="meta">29 October 2026 · Live testbed (real cellular SIMs) · greedy in-order goodput via the pinned sub-stream sender</div></header>
+
+<p class="lead">The win-table was model-based. Here we <b>measure the key decisions on the real bonded link</b>:
+we drive a saturating stream through the actual per-SIM pinned sub-streams at different split weights
+<code>w</code>, with and without the S4 impairment, and record the real <b>in-order goodput</b> (what a video
+actually gets) and <b>stall fraction</b>.</p>
+
+<div class="chart"><svg viewBox="0 0 930 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Live measured in-order goodput per split">
+ <line x1="60" y1="250.0" x2="900" y2="250.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="254.0" text-anchor="end" font-size="10" fill="var(--muted)">0</text><line x1="60" y1="194.5" x2="900" y2="194.5" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="198.5" text-anchor="end" font-size="10" fill="var(--muted)">10</text><line x1="60" y1="139.0" x2="900" y2="139.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="143.0" text-anchor="end" font-size="10" fill="var(--muted)">20</text><line x1="60" y1="83.5" x2="900" y2="83.5" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="87.5" text-anchor="end" font-size="10" fill="var(--muted)">30</text><line x1="60" y1="28.0" x2="900" y2="28.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="32.0" text-anchor="end" font-size="10" fill="var(--muted)">40</text><rect x="85.2" y="51.9" width="117.6" height="198.1" fill="var(--ok)" rx="2"/><text x="144.0" y="47.9" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700">35.7</text><text x="144.0" y="264" text-anchor="middle" font-size="9" fill="var(--ink)">w=0</text><text x="144.0" y="276" text-anchor="middle" font-size="8.5" fill="var(--muted)">Singtel only</text><text x="144.0" y="288" text-anchor="middle" font-size="8" fill="var(--muted)">stall 73%</text><rect x="253.2" y="87.7" width="117.6" height="162.3" fill="var(--accent2)" rx="2"/><text x="312.0" y="83.7" text-anchor="middle" font-size="10" fill="var(--accent2)" font-weight="700">29.2</text><text x="312.0" y="264" text-anchor="middle" font-size="9" fill="var(--ink)">w=0.5</text><text x="312.0" y="276" text-anchor="middle" font-size="8.5" fill="var(--muted)">bonded 50/50</text><text x="312.0" y="288" text-anchor="middle" font-size="8" fill="var(--muted)">stall 90%</text><rect x="421.2" y="167.0" width="117.6" height="83.0" fill="var(--accent2)" rx="2"/><text x="480.0" y="163.0" text-anchor="middle" font-size="10" fill="var(--accent2)" font-weight="700">15.0</text><text x="480.0" y="264" text-anchor="middle" font-size="9" fill="var(--ink)">w=1</text><text x="480.0" y="276" text-anchor="middle" font-size="8.5" fill="var(--muted)">Simba only</text><text x="480.0" y="288" text-anchor="middle" font-size="8" fill="var(--muted)">stall 79%</text><rect x="589.2" y="250.0" width="117.6" height="1.0" fill="var(--warn)" rx="2"/><text x="648.0" y="244.0" text-anchor="middle" font-size="10" fill="var(--warn)" font-weight="700">COLLAPSE</text><text x="648.0" y="264" text-anchor="middle" font-size="9" fill="var(--ink)">w=0.5</text><text x="648.0" y="276" text-anchor="middle" font-size="8.5" fill="var(--muted)">STATIC</text><text x="648.0" y="288" text-anchor="middle" font-size="8" fill="var(--muted)">stall 100%</text><rect x="757.2" y="52.7" width="117.6" height="197.3" fill="var(--ok)" rx="2"/><text x="816.0" y="48.7" text-anchor="middle" font-size="10" fill="var(--ok)" font-weight="700">35.5</text><text x="816.0" y="264" text-anchor="middle" font-size="9" fill="var(--ink)">w=0</text><text x="816.0" y="276" text-anchor="middle" font-size="8.5" fill="var(--muted)">AI / rule</text><text x="816.0" y="288" text-anchor="middle" font-size="8" fill="var(--muted)">stall 77%</text><text x="312.0" y="18" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">S0 — both links healthy</text><text x="732.0" y="18" text-anchor="middle" font-size="11" fill="var(--ink)" font-weight="700">S4 — Simba degraded</text>
+ <text x="60" y="18" font-size="10" fill="var(--muted)">in-order goodput (Mbit/s)</text>
+</svg></div>
+
+<table>
+ <thead><tr><th>Condition</th><th>Split</th><th>In-order goodput (Mbit/s)</th><th>Stall</th></tr></thead>
+ <tbody>
+  <tr><td>S0 — both healthy</td><td>w=0 · Singtel only</td><td class="n" style="color:var(--ok);font-weight:700">35.7</td><td class="n">73%</td></tr>
+  <tr><td>S0 — both healthy</td><td>w=0.5 · bonded 50/50</td><td class="n">29.2</td><td class="n">90%</td></tr>
+  <tr><td>S0 — both healthy</td><td>w=1 · Simba only</td><td class="n">15.0</td><td class="n">79%</td></tr>
+  <tr><td>S4 — Simba degraded</td><td><b>w=0.5 · STATIC</b></td><td class="n" style="color:var(--warn);font-weight:700">≈ 0 (collapse)</td><td class="n">~100%</td></tr>
+  <tr><td>S4 — Simba degraded</td><td><b>w=0 · AI / rule</b></td><td class="n" style="color:var(--ok);font-weight:700">35.6</td><td class="n">77%</td></tr>
+ </tbody>
+</table>
+
+<div class="box"><h3>What the live run proves</h3>
+<ul>
+ <li><b>Under S4, the smart decision wins by a landslide.</b> The fixed static split (w=0.5) sends half the
+ video down the degraded Simba path; in-order reassembly then stalls completely — <b>no video gets through</b>.
+ The AI/rule decision (w=0, all on healthy Singtel) delivers <b>35.6 Mbit/s</b>. This is the decision the
+ controller makes, measured on the real link.</li>
+ <li><b>Even with both links healthy, naive 50/50 bonding is not the best.</b> Leaning to the faster SIM
+ (35.7) beats the balanced split (29.2) because splitting one in-order stream across asymmetric paths causes
+ head-of-line stalls. The right split depends on the live asymmetry — exactly what a context-aware controller is for.</li>
+</ul></div>
+
+<div class="box find"><h3>Honest refinement to the model</h3>
+<p>The offline model treated the reorder penalty as mostly <i>latency</i> and assumed goodput peaks at a
+balanced split. The live link shows the reorder penalty also <b>cuts in-order goodput</b> (bonded 29.2 &lt;
+Singtel-alone 35.7; and total collapse under S4). So on the real link the case for a smart split is
+<b>stronger</b> than the model implied, not weaker. We will recalibrate the model's reorder term to this
+measured data — and note that stall fractions are high across the board (0.73–1.0), i.e. in-order video
+delivery over bonded cellular is genuinely hard and worth optimising.</p></div>
+
+<h2>Method</h2>
+<p>Pinned sub-stream sender (<code>mpproxy_send.py</code>, N=8: 4 per SIM, source-bound to each WAN IP) to a
+reassembling receiver on the VPS (<code>mpproxy_recv.py</code>), greedy (saturating), 7–8&nbsp;s per probe.
+S4 applied with the held netem injector. Metric = receiver-reported in-order goodput and stall fraction.
+Current live asymmetry: Singtel markedly faster than Simba (35 vs 15 Mbit/s alone), so "lean to Singtel"
+was right even when clean — a different day's asymmetry would flip which SIM to favour, which is the point.</p>
+
+<footer>Live testbed measurement, 29 Oct 2026. Sender/receiver: mpproxy_send.py / mpproxy_recv.py.
+Pairs with the model-based win-table (wintable.py / flash-report-wintable-en.html).</footer>
+</div></body></html>

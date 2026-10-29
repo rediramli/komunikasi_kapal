@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flash Report D10 — Real-Trace Replay</title>
+<style>
+  :root{--ink:#16202b;--muted:#5b6b7a;--line:#dce3ea;--bg:#fff;--accent:#065a82;
+    --accent2:#1c7293;--ok:#1b7f4b;--warn:#b85042;--chip:#eef4f8;}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e7eef5;
+    --muted:#9fb0bf;--line:#2a3745;--bg:#0f1720;--accent:#56b6e0;--accent2:#7fd3c6;
+    --ok:#58c58c;--warn:#e08a7e;--chip:#17222d;}}
+  :root[data-theme="dark"]{--ink:#e7eef5;--muted:#9fb0bf;--line:#2a3745;--bg:#0f1720;
+    --accent:#56b6e0;--accent2:#7fd3c6;--ok:#58c58c;--warn:#e08a7e;--chip:#17222d;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.58 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 16px 56px;}
+  header{border-bottom:3px solid var(--accent);padding-bottom:14px;margin-bottom:18px;}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;}
+  h1{font-size:23px;margin:6px 0;line-height:1.2;}
+  .meta{color:var(--muted);font-size:13px;}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent2);margin:24px 0 8px;border-left:3px solid var(--accent2);padding-left:9px;}
+  p{margin:8px 0;} .lead{font-size:16px;}
+  ul{margin:8px 0;padding-left:20px;} li{margin:4px 0;}
+  .chart{border:1px solid var(--line);border-radius:8px;background:var(--chip);padding:10px 8px 4px;}
+  .chart svg{width:100%;height:auto;}
+  figcaption{font-size:12.5px;color:var(--muted);margin-top:6px;}
+  .legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:12px;margin:6px 0 2px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}.sw{width:16px;height:3px;border-radius:2px;display:inline-block;}
+  code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  .box{border:1px solid var(--line);border-left:3px solid var(--ok);background:var(--chip);border-radius:6px;padding:12px 14px;margin:12px 0;}
+  .box.find{border-left-color:var(--warn);}.box h3{margin:0 0 4px;font-size:14px;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;}th{background:var(--chip);font-weight:700;}
+  footer{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  @media print{body{font-size:12px}.wrap{max-width:none;padding:0}.chart{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<header>
+  <div class="kicker">Flash Report · D10 Real-Trace Replay</div>
+  <h1>The Ultimate Dynamic Test — Replaying the Real PSA Agility Link Trace</h1>
+  <div class="meta">29 October 2026 · Live testbed · Jetson LinUCB · tc netem replay of real vessel data</div>
+</header>
+
+<p class="lead">The static (S4) and synthetic-voyage tests showed the AI adapts. D10 goes further: we take an
+<b>actual recorded trace of the Simba link from the PSA Agility vessel</b> (RUT241, from the onboard
+router database) and replay it, second by second, onto our testbed SIM. No hand-picked numbers — this is
+what the real link did at sea.</p>
+
+<h2>The real segment</h2>
+<p>From the PSA <code>link_stats_RUT241</code> table we took a contiguous 48-sample segment (~28&nbsp;min of
+real sailing at the router's 36&nbsp;s cadence) and <b>time-compressed it to 3&nbsp;s per sample</b> (144&nbsp;s
+replay). It is a genuine "flickering dead zone": a healthy ~30&nbsp;ms baseline punctuated by RTT spikes to
+<b>1000–1864&nbsp;ms</b> and repeated <b>demotions (100% loss)</b>, then recovery. Each sample is mapped to
+netem (<code>delay = rtt − 15&nbsp;ms</code>, <code>loss = loss_pct</code>; a demoted sample → total drop) and
+held for its slot.</p>
+
+<div class="chart"><svg viewBox="0 0 950 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="D10 PSA real-trace replay: real trace vs AI decision">
+  <line x1="60" y1="290.0" x2="900" y2="290.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="294.0" text-anchor="end" font-size="10" fill="var(--muted)">0</text><line x1="60" y1="224.5" x2="900" y2="224.5" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="228.5" text-anchor="end" font-size="10" fill="var(--muted)">150</text><line x1="60" y1="159.0" x2="900" y2="159.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="163.0" text-anchor="end" font-size="10" fill="var(--muted)">300</text><line x1="60" y1="93.5" x2="900" y2="93.5" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="97.5" text-anchor="end" font-size="10" fill="var(--muted)">450</text><line x1="60" y1="28.0" x2="900" y2="28.0" stroke="var(--line)" stroke-width="1" opacity="0.5"/><text x="53" y="32.0" text-anchor="end" font-size="10" fill="var(--muted)">600+</text><text x="907" y="294.0" text-anchor="start" font-size="10" fill="var(--ok)">0.00</text><text x="907" y="228.5" text-anchor="start" font-size="10" fill="var(--ok)">0.25</text><text x="907" y="163.0" text-anchor="start" font-size="10" fill="var(--ok)">0.50</text><text x="907" y="32.0" text-anchor="start" font-size="10" fill="var(--ok)">1.00</text><text x="60.0" y="306" text-anchor="middle" font-size="10" fill="var(--muted)">0s</text><text x="235.0" y="306" text-anchor="middle" font-size="10" fill="var(--muted)">30s</text><text x="410.0" y="306" text-anchor="middle" font-size="10" fill="var(--muted)">60s</text><text x="585.0" y="306" text-anchor="middle" font-size="10" fill="var(--muted)">90s</text><text x="760.0" y="306" text-anchor="middle" font-size="10" fill="var(--muted)">120s</text>
+  <polyline points="60.0,227.6 77.5,227.6 77.5,260.3 95.0,260.3 95.0,257.7 112.5,257.7 112.5,278.6 130.0,278.6 130.0,265.5 147.5,265.5 147.5,277.8 165.0,277.8 165.0,279.1 182.5,279.1 182.5,268.6 200.0,268.6 200.0,231.1 217.5,231.1 217.5,266.0 235.0,266.0 235.0,28.0 252.5,28.0 252.5,28.0 270.0,28.0 270.0,28.0 287.5,28.0 287.5,200.0 305.0,200.0 305.0,180.4 322.5,180.4 322.5,28.0 340.0,28.0 340.0,278.6 357.5,278.6 357.5,276.9 375.0,276.9 375.0,277.8 392.5,277.8 392.5,274.3 410.0,274.3 410.0,274.3 427.5,274.3 427.5,275.6 445.0,275.6 445.0,276.5 462.5,276.5 462.5,28.0 480.0,28.0 480.0,275.2 497.5,275.2 497.5,279.1 515.0,279.1 515.0,274.3 532.5,274.3 532.5,28.0 550.0,28.0 550.0,276.0 567.5,276.0 567.5,275.2 585.0,275.2 585.0,28.0 602.5,28.0 602.5,277.8 620.0,277.8 620.0,28.0 637.5,28.0 637.5,279.5 655.0,279.5 655.0,277.3 672.5,277.3 672.5,28.0 690.0,28.0 690.0,28.0 707.5,28.0 707.5,112.3 725.0,112.3 725.0,278.2 742.5,278.2 742.5,276.9 760.0,276.9 760.0,252.0 777.5,252.0 777.5,279.1 795.0,279.1 795.0,201.8 812.5,201.8 812.5,279.1 830.0,279.1 830.0,275.6 847.5,275.6 847.5,278.6 865.0,278.6 865.0,278.2 882.5,278.2 882.5,28.0 900.0,28.0" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.9"/>
+  <polyline points="60.0,280.0 71.7,280.0 83.3,279.5 95.0,279.5 112.5,277.8 124.2,283.4 135.8,283.4 147.5,231.9 159.2,283.4 170.8,283.4 182.5,159.0 194.2,284.3 205.8,284.3 217.5,159.0 235.0,159.0 246.7,159.0 258.3,159.0 270.0,159.0 281.7,159.0 293.3,159.0 305.0,159.0 316.7,159.0 328.3,159.0 340.0,159.0 351.7,159.0 363.3,159.0 380.8,159.0 392.5,159.0 404.2,159.0 415.8,159.0 427.5,159.0 439.2,159.0 450.8,159.0 462.5,159.0 474.2,159.0 485.8,159.0 497.5,159.0 515.0,159.0 526.7,159.0 538.3,159.0 550.0,159.0 561.7,159.0 573.3,159.0 585.0,159.0 596.7,159.0 608.3,159.0 620.0,159.0 631.7,159.0 649.2,159.0 660.8,159.0 672.5,159.0 684.2,159.0 695.8,159.0 707.5,159.0 719.2,159.0 730.8,159.0 742.5,159.0 754.2,159.0 765.8,159.0 777.5,159.0 795.0,159.0 806.7,159.0 818.3,159.0 830.0,159.0 841.7,283.9 853.3,284.8 865.0,284.8 876.7,284.3 888.3,285.2 900.0,285.2 917.5,283.9 929.2,283.9 940.8,283.9 952.5,285.6 964.2,283.9 975.8,284.3" fill="none" stroke="var(--warn)" stroke-width="2"/>
+  <polyline points="60.0,224.5 71.7,224.5 71.7,224.5 83.3,224.5 83.3,224.5 95.0,224.5 95.0,224.5 112.5,224.5 112.5,224.5 124.2,224.5 124.2,224.5 135.8,224.5 135.8,224.5 147.5,224.5 147.5,224.5 159.2,224.5 159.2,224.5 170.8,224.5 170.8,224.5 182.5,224.5 182.5,290.0 194.2,290.0 194.2,224.5 205.8,224.5 205.8,224.5 217.5,224.5 217.5,290.0 235.0,290.0 235.0,290.0 246.7,290.0 246.7,290.0 258.3,290.0 258.3,290.0 270.0,290.0 270.0,290.0 281.7,290.0 281.7,290.0 293.3,290.0 293.3,290.0 305.0,290.0 305.0,290.0 316.7,290.0 316.7,290.0 328.3,290.0 328.3,290.0 340.0,290.0 340.0,290.0 351.7,290.0 351.7,290.0 363.3,290.0 363.3,290.0 380.8,290.0 380.8,290.0 392.5,290.0 392.5,290.0 404.2,290.0 404.2,290.0 415.8,290.0 415.8,290.0 427.5,290.0 427.5,290.0 439.2,290.0 439.2,290.0 450.8,290.0 450.8,290.0 462.5,290.0 462.5,290.0 474.2,290.0 474.2,290.0 485.8,290.0 485.8,290.0 497.5,290.0 497.5,290.0 515.0,290.0 515.0,290.0 526.7,290.0 526.7,290.0 538.3,290.0 538.3,290.0 550.0,290.0 550.0,290.0 561.7,290.0 561.7,290.0 573.3,290.0 573.3,290.0 585.0,290.0 585.0,290.0 596.7,290.0 596.7,290.0 608.3,290.0 608.3,290.0 620.0,290.0 620.0,290.0 631.7,290.0 631.7,290.0 649.2,290.0 649.2,290.0 660.8,290.0 660.8,290.0 672.5,290.0 672.5,290.0 684.2,290.0 684.2,290.0 695.8,290.0 695.8,290.0 707.5,290.0 707.5,290.0 719.2,290.0 719.2,290.0 730.8,290.0 730.8,290.0 742.5,290.0 742.5,290.0 754.2,290.0 754.2,290.0 765.8,290.0 765.8,290.0 777.5,290.0 777.5,290.0 795.0,290.0 795.0,290.0 806.7,290.0 806.7,290.0 818.3,290.0 818.3,290.0 830.0,290.0 830.0,290.0 841.7,290.0 841.7,224.5 853.3,224.5 853.3,224.5 865.0,224.5 865.0,224.5 876.7,224.5 876.7,224.5 888.3,224.5 888.3,224.5 900.0,224.5 900.0,224.5 917.5,224.5 917.5,224.5 929.2,224.5 929.2,224.5 940.8,224.5 940.8,224.5 952.5,224.5 952.5,224.5 964.2,224.5 964.2,224.5 975.8,224.5 975.8,224.5" fill="none" stroke="var(--ok)" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="243.8" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">1000</text><text x="261.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="278.8" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="331.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="471.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">967</text><text x="541.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="593.8" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="628.8" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><text x="681.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">1864</text><text x="698.8" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">834</text><text x="891.2" y="25" text-anchor="middle" font-size="8" fill="var(--warn)">DOWN</text><g stroke="#b00" stroke-width="1.6"><line x1="258" y1="30" x2="264" y2="36"/><line x1="258" y1="36" x2="264" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="276" y1="30" x2="282" y2="36"/><line x1="276" y1="36" x2="282" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="328" y1="30" x2="334" y2="36"/><line x1="328" y1="36" x2="334" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="538" y1="30" x2="544" y2="36"/><line x1="538" y1="36" x2="544" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="591" y1="30" x2="597" y2="36"/><line x1="591" y1="36" x2="597" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="626" y1="30" x2="632" y2="36"/><line x1="626" y1="36" x2="632" y2="30"/></g><g stroke="#b00" stroke-width="1.6"><line x1="888" y1="30" x2="894" y2="36"/><line x1="888" y1="36" x2="894" y2="30"/></g><circle cx="182.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="217.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="235.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="246.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="258.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="270.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="281.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="293.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="305.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="316.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="328.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="340.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="351.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="363.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="380.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="392.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="404.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="415.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="427.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="439.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="450.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="462.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="474.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="485.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="497.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="515.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="526.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="538.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="550.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="561.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="573.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="585.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="596.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="608.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="620.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="631.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="649.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="660.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="672.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="684.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="695.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="707.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="719.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="730.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="742.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="754.2" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="765.8" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="777.5" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="795.0" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="806.7" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="818.3" cy="290.0" r="3.5" fill="var(--ok)"/><circle cx="830.0" cy="290.0" r="3.5" fill="var(--ok)"/>
+  <text x="60" y="16" font-size="11" fill="var(--ink)" font-weight="700">RTT (ms, clipped at 600)</text>
+  <text x="900" y="16" font-size="11" fill="var(--ok)" font-weight="700" text-anchor="end">w (share to Simba)</text>
+</svg></div>
+<div class="legend">
+  <span><i class="sw" style="background:var(--muted)"></i>Real PSA trace (target condition)</span>
+  <span><i class="sw" style="background:var(--warn)"></i>AI observed RTT (Simba)</span>
+  <span><i class="sw" style="background:var(--ok)"></i>AI decision · w</span>
+  <span>&times; = demotion / DOWN in the real trace · green dot = w→0</span>
+</div>
+<figcaption>Real Simba trace vs the AI's live decision over the 144&nbsp;s replay. The AI's observed RTT is
+clipped at 300&nbsp;ms: once the link exceeds the ~1&nbsp;s probe timeout or drops packets, the sampler reports
+it as unreachable (300&nbsp;ms / loss) — i.e. the real link was often <i>worse than the AI could even measure</i>.</figcaption>
+
+<h2>Result</h2>
+<table>
+  <thead><tr><th>Replay phase</th><th>Real Simba condition</th><th>AI decision</th></tr></thead>
+  <tbody>
+    <tr><td>Start (0–21 s)</td><td>healthy, ~25–70 ms</td><td class="wn">w=0.25 (normal split)</td></tr>
+    <tr><td>Middle (27–134 s)</td><td>spikes 1000–1864 ms + repeated demotions</td><td style="color:var(--ok);font-weight:700">w=0.00 (parks load on Singtel)</td></tr>
+    <tr><td>End (134–144 s)</td><td>recovered, ~30 ms</td><td class="wn">w=0.25 (hands load back)</td></tr>
+  </tbody>
+</table>
+<div class="box">
+  <h3>What the AI did — faithful to the real link</h3>
+  <p>The AI shifted the camera load entirely to Singtel for the whole bad stretch (<b>w=0 in 52 of 76
+  decisions</b>), and returned to the normal split at the start and end when Simba was genuinely healthy.
+  It tracked the <b>real</b> link, not a script — correctly abandoning a SIM that was spiking to ~2&nbsp;s and
+  dropping out, and reclaiming it the moment coverage returned.</p>
+</div>
+
+<h2>Method</h2>
+<p>A reusable replayer, <code>tasks/netem-replay.sh</code>, reads the real trace (pushed to the RPi) and
+steps netem through it, holding each sample by re-asserting every 1&nbsp;s (so OMR's tracker can't wipe it),
+with auto-restore on exit. The same 1&nbsp;Hz telemetry and the live LinUCB controller run unchanged. Invoked:</p>
+<p><code>ssh … 'cat &gt; /tmp/netem_trace.csv' &lt; trace.csv</code> &nbsp;then&nbsp;
+<code>ssh … 'sh -s wan1 3' &lt; tasks/netem-replay.sh</code></p>
+
+<h2>Takeaway for the paper</h2>
+<ul>
+  <li>D10 is the strongest validity argument: the controller is exercised by <b>real at-sea link behaviour</b>, not a model.</li>
+  <li>It behaved correctly under conditions harsher than our synthetic S4 — confirming the policy generalises.</li>
+  <li>Honest caveat for the write-up: this segment was so degraded that the "right" action was almost always
+  "use Singtel"; a <b>quantitative win vs baselines</b> (goodput / video stall) on a mix of segments is the next step to show the AI's value, not just its correctness.</li>
+</ul>
+
+<footer>
+  Source: PSA Agility onboard router DB snapshot (RUT241 / Simba, link_stats, 36&nbsp;s cadence), replayed
+  time-compressed to 3&nbsp;s/sample on the RPi4 OpenMPTCProuter testbed; edge AI (LinUCB) on a Jetson Orin NX.
+  All values are real measurements / real trace data from the 29 Oct 2026 session.
+</footer>
+</div></body></html>
